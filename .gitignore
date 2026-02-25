@@ -1,0 +1,21 @@
+# Dependencias (se instalan con npm install)
+node_modules/
+
+# Build
+dist/
+
+# Variables de entorno con credenciales
+.env
+.env.local
+.env.*.local
+
+# Logs y caché
+npm-debug.log*
+.npm
+*.log
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
