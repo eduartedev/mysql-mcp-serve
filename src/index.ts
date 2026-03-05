@@ -24,7 +24,7 @@ const QuerySchema = z.object({
     .string()
     .min(1, "query es obligatoria")
     .max(16 * 1024)
-    .describe("Consulta SQL SELECT únicamente"),
+    .describe("Consulta SQL de solo lectura: SELECT, SHOW, DESCRIBE o EXPLAIN"),
   database: z
     .string()
     .optional()
@@ -34,9 +34,9 @@ const QuerySchema = z.object({
 server.registerTool(
   "mysql_query",
   {
-    title: "Ejecutar consulta SELECT",
+    title: "Ejecutar consulta de lectura",
     description:
-      "Ejecuta una consulta SQL SELECT. Solo se permiten consultas SELECT. No se permiten SHOW, DESCRIBE, EXPLAIN ni ningún otro comando.",
+      "Ejecuta consultas SQL de solo lectura: SELECT, SHOW, DESCRIBE y EXPLAIN. Se bloquean comandos de escritura, destructivos y variantes sensibles de SHOW (GRANTS, VARIABLES, PROCESSLIST).",
     inputSchema: QuerySchema,
     annotations: {
       readOnlyHint: true,
