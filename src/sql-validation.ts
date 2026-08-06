@@ -1,10 +1,25 @@
 /**
- * Validación de SQL: se permiten consultas de solo lectura.
- * Whitelist: SELECT, SHOW, DESCRIBE, DESC, EXPLAIN.
- * Se bloquean variantes sensibles de SHOW y funciones peligrosas dentro de SELECT.
+ * Validación de SQL (Nivel B):
+ * - Lectura: SELECT, WITH, SHOW, DESCRIBE, DESC, EXPLAIN, ANALYZE, CHECK, CHECKSUM
+ * - Escritura controlada: INSERT libre; UPDATE/DELETE solo con cláusula WHERE
+ * - Se bloquean DDL/DCL destructivos, SHOW sensibles y funciones peligrosas
  */
 
-const ALLOWED_FIRST_KEYWORDS = ["SELECT", "SHOW", "DESCRIBE", "DESC", "EXPLAIN"];
+const READ_ONLY_KEYWORDS = [
+  "SELECT",
+  "SHOW",
+  "DESCRIBE",
+  "DESC",
+  "EXPLAIN",
+  "WITH",
+  "ANALYZE",
+  "CHECK",
+  "CHECKSUM",
+];
+
+const WRITE_KEYWORDS = ["INSERT", "UPDATE", "DELETE"];
+
+const ALLOWED_FIRST_KEYWORDS = [...READ_ONLY_KEYWORDS, ...WRITE_KEYWORDS];
 
 const DESTRUCTIVE_KEYWORDS = [
   "DROP",
@@ -32,11 +47,7 @@ const DESTRUCTIVE_KEYWORDS = [
 ];
 
 /** Patrones seguros que contienen palabras clave destructivas pero son inofensivos. */
-const SAFE_EXCEPTIONS: RegExp[] = [
-  /\bSHOW\s+CREATE\b/i,
-];
-
-const WRITE_KEYWORDS = ["INSERT", "UPDATE", "DELETE"];
+const SAFE_EXCEPTIONS: RegExp[] = [/\bSHOW\s+CREATE\b/i];
 
 const SENSITIVE_SHOW_PATTERNS: RegExp[] = [
   /\bSHOW\s+GRANTS\b/i,
@@ -56,6 +67,13 @@ const DANGEROUS_FUNCTION_PATTERNS: RegExp[] = [
   /\bINTO\s+DUMPFILE\b/i,
 ];
 
+/** WHERE que afectan todas las filas de forma obvia. */
+const ALWAYS_TRUE_WHERE_PATTERNS: RegExp[] = [
+  /\bWHERE\s+1\s*=\s*1\b/i,
+  /\bWHERE\s+TRUE\b/i,
+  /\bWHERE\s+1\b(?!\s*[=<>!])/i,
+];
+
 function normalizeSql(sql: string): string {
   return sql.trim().replace(/\s+/g, " ");
 }
@@ -67,7 +85,7 @@ function getFirstKeyword(sql: string): string {
 }
 
 export function isReadOnlyCommand(sql: string): boolean {
-  return ALLOWED_FIRST_KEYWORDS.includes(getFirstKeyword(sql));
+  return READ_ONLY_KEYWORDS.includes(getFirstKeyword(sql));
 }
 
 export function isSelectQuery(sql: string): boolean {
@@ -101,7 +119,43 @@ export function hasDangerousFunction(sql: string): boolean {
 
 export function isWriteQuery(sql: string): boolean {
   const first = getFirstKeyword(sql);
-  return WRITE_KEYWORDS.includes(first);
+  if (WRITE_KEYWORDS.includes(first)) return true;
+  // WITH ... INSERT/UPDATE/DELETE
+  if (first === "WITH") {
+    return /\b(INSERT|UPDATE|DELETE)\b/i.test(sql);
+  }
+  return false;
+}
+
+export function hasWhereClause(sql: string): boolean {
+  return /\bWHERE\b/i.test(normalizeSql(sql));
+}
+
+export function hasAlwaysTrueWhere(sql: string): boolean {
+  const normalized = normalizeSql(sql);
+  if (ALWAYS_TRUE_WHERE_PATTERNS.some((re) => re.test(normalized))) {
+    return true;
+  }
+  // WHERE 'x'='x' o WHERE "x"="x"
+  if (/\bWHERE\s+(['"])([^'"]*)\1\s*=\s*\1\2\1/i.test(normalized)) {
+    return true;
+  }
+  return false;
+}
+
+/** UPDATE/DELETE (o WITH que los contiene) requieren WHERE. */
+export function requiresWhereClause(sql: string): boolean {
+  const first = getFirstKeyword(sql);
+  if (first === "UPDATE" || first === "DELETE") return true;
+  if (first === "WITH") {
+    return /\b(UPDATE|DELETE)\b/i.test(sql);
+  }
+  return false;
+}
+
+export function hasMultipleStatements(sql: string): boolean {
+  const withoutTrailing = sql.trim().replace(/;\s*$/, "");
+  return withoutTrailing.includes(";");
 }
 
 export interface ValidationResult {
@@ -110,13 +164,19 @@ export interface ValidationResult {
 }
 
 /**
- * Valida que la consulta sea de solo lectura (SELECT, SHOW, DESCRIBE, EXPLAIN).
- * Bloquea SHOW sensibles, funciones peligrosas y cualquier comando destructivo/de escritura.
+ * Valida consultas de lectura ampliada y escritura controlada (Nivel B).
  */
 export function validateQuery(sql: string): ValidationResult {
   const trimmed = sql.trim();
   if (!trimmed) {
     return { allowed: false, error: "La consulta SQL no puede estar vacía." };
+  }
+
+  if (hasMultipleStatements(trimmed)) {
+    return {
+      allowed: false,
+      error: "No se permiten múltiples sentencias en una sola consulta.",
+    };
   }
 
   if (hasDestructiveKeyword(trimmed)) {
@@ -127,18 +187,12 @@ export function validateQuery(sql: string): ValidationResult {
     };
   }
 
-  if (isWriteQuery(trimmed)) {
-    return {
-      allowed: false,
-      error: "No se permiten INSERT, UPDATE ni DELETE. Solo consultas de lectura.",
-    };
-  }
-
-  if (!isReadOnlyCommand(trimmed)) {
+  const first = getFirstKeyword(trimmed);
+  if (!ALLOWED_FIRST_KEYWORDS.includes(first)) {
     return {
       allowed: false,
       error:
-        "Solo se permiten consultas de lectura: SELECT, SHOW, DESCRIBE y EXPLAIN.",
+        "Comando no permitido. Se aceptan: SELECT, WITH, SHOW, DESCRIBE, EXPLAIN, ANALYZE, CHECK, CHECKSUM, INSERT, UPDATE y DELETE.",
     };
   }
 
@@ -156,6 +210,23 @@ export function validateQuery(sql: string): ValidationResult {
       error:
         "La consulta contiene funciones no permitidas (SLEEP, BENCHMARK, LOAD_FILE, INTO OUTFILE/DUMPFILE).",
     };
+  }
+
+  if (requiresWhereClause(trimmed)) {
+    if (!hasWhereClause(trimmed)) {
+      return {
+        allowed: false,
+        error:
+          "UPDATE y DELETE requieren una cláusula WHERE para evitar modificar todas las filas.",
+      };
+    }
+    if (hasAlwaysTrueWhere(trimmed)) {
+      return {
+        allowed: false,
+        error:
+          "La cláusula WHERE parece siempre verdadera (ej. WHERE 1=1). Usa una condición real.",
+      };
+    }
   }
 
   return { allowed: true };

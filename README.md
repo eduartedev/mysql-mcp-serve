@@ -1,6 +1,6 @@
 # mysql-mcp-server
 
-Servidor MCP para ejecutar consultas **SELECT** en una base de datos MySQL local. Pensado para usarse desde Cursor u otro cliente MCP.
+Servidor MCP para consultar y modificar de forma controlada una base de datos MySQL local. Pensado para usarse desde Cursor u otro cliente MCP.
 
 ## Requisitos
 
@@ -17,13 +17,13 @@ npm install
 
 Conexión mediante variables de entorno. Puedes crear un `.env` en la raíz (no se sube a Git) o definirlas donde arranques el MCP.
 
-| Variable           | Por defecto  | Descripción                    |
-|--------------------|-------------|---------------------------------|
-| `MYSQL_HOST`       | localhost   | Host del servidor MySQL         |
-| `MYSQL_PORT`       | 3306        | Puerto                          |
-| `MYSQL_USER`       | root        | Usuario                         |
-| `MYSQL_PASSWORD`   | (vacío)     | Contraseña                      |
-| `MYSQL_DATABASE`   | (opcional)  | Base de datos por defecto       |
+| Variable         | Por defecto | Descripción              |
+|------------------|-------------|--------------------------|
+| `MYSQL_HOST`     | localhost   | Host del servidor MySQL  |
+| `MYSQL_PORT`     | 3306        | Puerto                   |
+| `MYSQL_USER`     | root        | Usuario                  |
+| `MYSQL_PASSWORD` | (vacío)     | Contraseña               |
+| `MYSQL_DATABASE` | (opcional)  | Base de datos por defecto|
 
 Ejemplo `.env`:
 
@@ -91,20 +91,37 @@ MYSQL_DATABASE=mi_base
 
 ## Herramienta disponible
 
-- **mysql_query**: ejecuta una consulta SQL **SELECT**.
-  - `query`: texto de la consulta (solo SELECT).
+- **mysql_query**: ejecuta una consulta SQL validada.
+  - `query`: texto de la consulta.
   - `database`: (opcional) nombre de la base a usar; si no se indica, se usa `MYSQL_DATABASE`.
 
-No se permiten INSERT, UPDATE, DELETE, SHOW, DESCRIBE ni otros comandos; solo SELECT.
+### Comandos permitidos
+
+| Tipo | Comandos |
+|------|----------|
+| Lectura | `SELECT`, `WITH`, `SHOW`, `DESCRIBE` / `DESC`, `EXPLAIN`, `ANALYZE`, `CHECK`, `CHECKSUM` |
+| Escritura | `INSERT` · `UPDATE` / `DELETE` (requieren `WHERE`) |
+
+Ejemplos de `SHOW` permitidos: `SHOW TABLES`, `SHOW DATABASES`, `SHOW COLUMNS`, `SHOW INDEX`, `SHOW CREATE TABLE`, `SHOW TABLE STATUS`, `SHOW STATUS`, `SHOW CHARACTER SET`, `SHOW COLLATION`, `SHOW ENGINES`, `SHOW WARNINGS`, `SHOW ERRORS`, `SHOW OPEN TABLES`.
+
+### Restricciones de seguridad
+
+- `UPDATE` y `DELETE` **deben** incluir una cláusula `WHERE`.
+- Se rechazan `WHERE` siempre verdaderos (`WHERE 1=1`, `WHERE TRUE`, `WHERE 1`, `WHERE 'a'='a'`).
+- No se permiten múltiples sentencias en una sola consulta.
+- Se bloquean comandos destructivos: `DROP`, `TRUNCATE`, `ALTER`, `CREATE`, `REPLACE`, `RENAME`, `GRANT`, `REVOKE`, `LOAD DATA`, `FLUSH`, `RESET`, `PREPARE`, etc.
+- Se bloquean variantes sensibles de `SHOW`: `SHOW GRANTS`, `SHOW VARIABLES`, `SHOW PROCESSLIST`, `SHOW MASTER/SLAVE/REPLICA STATUS`, `SHOW BINARY LOGS`, etc.
+- Se bloquean funciones peligrosas: `SLEEP()`, `BENCHMARK()`, `LOAD_FILE()`, `INTO OUTFILE`, `INTO DUMPFILE`.
 
 ## Comandos del proyecto
 
-| Comando       | Descripción              |
-|---------------|--------------------------|
-| `npm install` | Instalar dependencias    |
-| `npm run build` | Compilar TypeScript   |
-| `npm start`   | Ejecutar (usa `dist/`)   |
-| `npm run dev` | Ejecutar con tsx (sin build) |
+| Comando         | Descripción                    |
+|-----------------|--------------------------------|
+| `npm install`   | Instalar dependencias          |
+| `npm run build` | Compilar TypeScript            |
+| `npm start`     | Ejecutar (usa `dist/`)         |
+| `npm run dev`   | Ejecutar con tsx (sin build)   |
+| `npm test`      | Ejecutar tests unitarios       |
 
 ## Licencia
 
