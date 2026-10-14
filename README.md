@@ -94,6 +94,26 @@ MYSQL_DATABASE=mi_base
 - **mysql_query**: ejecuta una consulta SQL validada.
   - `query`: texto de la consulta.
   - `database`: (opcional) nombre de la base a usar; si no se indica, se usa `MYSQL_DATABASE`.
+  - `limit`: (opcional) filas por página, por defecto 20, máximo 100.
+  - `offset`: (opcional) filas a saltar antes de la página, por defecto 0.
+  - `response_format`: (opcional) `markdown` (por defecto) o `json`.
+
+`limit` y `offset` paginan las filas que ya devolvió MySQL; no reescriben el SQL.
+
+Campos estructurados de la respuesta (`structuredContent`):
+
+| Campo | Descripción |
+|-------|-------------|
+| `totalCount` | Filas devueltas por MySQL antes de paginar |
+| `count` | Filas de esta página |
+| `offset` | Offset aplicado |
+| `limit` | Límite aplicado |
+| `hasMore` | `true` si quedan filas después de esta página |
+| `nextOffset` | Offset de la siguiente página, o `null` si no hay más |
+| `truncated` | `true` si el texto superó los 25000 caracteres y se cortó |
+| `rows` | Filas de la página (objetos planos) |
+
+Una respuesta de texto de más de 25000 caracteres se corta y se marca como `truncated`.
 
 ### Comandos permitidos
 

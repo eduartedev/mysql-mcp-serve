@@ -1,0 +1,42 @@
+<evaluation>
+  <qa_pair>
+    <question>Usando las tablas customers y orders, ¿cuántos pedidos con estado paid pertenecen a clientes del segmento retail que viven en León?</question>
+    <answer>3</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Considerando solo las líneas de order_items cuyos pedidos tienen estado paid, ¿qué sku aparece en más líneas?</question>
+    <answer>LAMP-A</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>¿Cuál es la suma de total_cents de los pedidos con estado paid cuyo cliente vive en León?</question>
+    <answer>74000</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>¿Cuál es el nombre del cliente con la mayor suma de total_cents entre sus pedidos con estado paid?</question>
+    <answer>Bruno Díaz</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>¿Cuántas líneas de order_items pertenecientes a pedidos con estado paid tienen una cantidad (qty) mayor que 1?</question>
+    <answer>4</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>¿En qué ciudad vive el cliente del pedido con estado paid que tiene la fecha created_on más antigua?</question>
+    <answer>León</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>De los dos pedidos de la clienta Clara Soto, ¿qué estado tiene el que tiene el menor total_cents?</question>
+    <answer>void</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>¿Cuál es la suma de qty del sku LAMP-A considerando únicamente pedidos con estado paid?</question>
+    <answer>7</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>¿Cuántos clientes no tienen ningún pedido con estado paid?</question>
+    <answer>1</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Entre los pedidos con estado paid, ¿cuál es el id de aquel cuyo total_cents no coincide con la suma de qty multiplicado por unit_cents de sus líneas?</question>
+    <answer>105</answer>
+  </qa_pair>
+</evaluation>

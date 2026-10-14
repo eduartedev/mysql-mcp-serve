@@ -1,7 +1,9 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { z } from "zod";
 import { createPool, getMysqlConfig, type Pool } from "./db.js";
+import { formatQueryResult, QueryOutputSchema, type QueryOutput } from "./format-result.js";
+import { QuerySchema } from "./query-schema.js";
+import { toActionableSqlError } from "./sql-error.js";
 import { validateQuery } from "./sql-validation.js";
 
 let pool: Pool | null = null;
@@ -19,34 +21,36 @@ const server = new McpServer({
   version: "1.0.0",
 });
 
-const QuerySchema = z.object({
-  query: z
-    .string()
-    .min(1, "query es obligatoria")
-    .max(16 * 1024)
-    .describe(
-      "SQL permitido: SELECT/WITH/SHOW/DESCRIBE/EXPLAIN/ANALYZE/CHECK/CHECKSUM, INSERT, y UPDATE/DELETE (estos últimos requieren WHERE)",
-    ),
-  database: z
-    .string()
-    .optional()
-    .describe("Base de datos a usar (USE ...) antes de ejecutar; opcional si ya tienes MYSQL_DATABASE"),
-});
-
 server.registerTool(
   "mysql_query",
   {
     title: "Ejecutar consulta SQL",
     description:
-      "Ejecuta SQL de lectura (SELECT, WITH, SHOW, DESCRIBE, EXPLAIN, ANALYZE, CHECK, CHECKSUM) y escritura controlada (INSERT; UPDATE/DELETE solo con WHERE). Bloquea DDL destructivo, SHOW sensibles y funciones peligrosas.",
+      "Ejecuta SQL de lectura (SELECT, WITH, SHOW, DESCRIBE, EXPLAIN, ANALYZE, CHECK, CHECKSUM) y escritura controlada (INSERT; UPDATE/DELETE solo con WHERE). Bloquea DDL destructivo, SHOW sensibles y funciones peligrosas.\n\n" +
+      "Argumentos: query (una sola sentencia), database (opcional, USE previo), limit (filas por página, 1-100, por defecto 20), offset (filas a saltar, por defecto 0) y response_format ('markdown' o 'json'). limit y offset paginan las filas ya devueltas; no modifican el SQL.\n\n" +
+      "Devuelve: totalCount, count, offset, limit, hasMore, nextOffset, truncated y rows. Si hasMore es true, repite la llamada con offset = nextOffset. Las respuestas de más de 25000 caracteres se truncan (truncated = true).\n\n" +
+      "Ejemplo: { \"query\": \"SELECT id, name FROM customers ORDER BY id\", \"limit\": 20, \"offset\": 20 }.\n\n" +
+      "Si la validación rechaza la consulta, el error nombra la regla incumplida.",
     inputSchema: QuerySchema,
+    outputSchema: QueryOutputSchema,
     annotations: {
       readOnlyHint: false,
       destructiveHint: true,
       idempotentHint: false,
+      openWorldHint: true,
     },
   },
-  async ({ query, database }) => {
+  async ({
+    query,
+    database,
+    limit,
+    offset,
+    response_format,
+  }): Promise<{
+    content: { type: "text"; text: string }[];
+    structuredContent?: QueryOutput;
+    isError?: boolean;
+  }> => {
     const validation = validateQuery(query);
     if (!validation.allowed) {
       return {
@@ -61,19 +65,19 @@ server.registerTool(
         await p.query("USE ??", [database]);
       }
       const [rows] = await p.query(query);
-      const arr = Array.isArray(rows) ? rows : [rows];
-      const text =
-        arr.length === 0
-          ? "Sin filas."
-          : JSON.stringify(arr, null, 2);
+      const { text, output } = formatQueryResult({
+        rows,
+        limit,
+        offset,
+        responseFormat: response_format,
+      });
       return {
         content: [{ type: "text", text }],
-        structuredContent: { rowCount: arr.length, rows: arr },
+        structuredContent: output,
       };
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
       return {
-        content: [{ type: "text", text: `Error SQL: ${msg}` }],
+        content: [{ type: "text", text: toActionableSqlError(err) }],
         isError: true,
       };
     }
