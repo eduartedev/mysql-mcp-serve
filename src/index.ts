@@ -5,8 +5,11 @@ import { formatQueryResult, QueryOutputSchema, type QueryOutput } from "./format
 import { QuerySchema } from "./query-schema.js";
 import { toActionableSqlError } from "./sql-error.js";
 import { gateQuery, resolveAccessMode, toolAnnotations } from "./access-mode.js";
+import { authorizeDatabase, parseAllowlist } from "./schema-permissions.js";
 
 const accessMode = resolveAccessMode(process.env.MYSQL_ACCESS_MODE);
+const allowlist = parseAllowlist(process.env.MYSQL_ALLOWED_DATABASES);
+const configuredDatabase = getMysqlConfig().database;
 
 let pool: Pool | null = null;
 
@@ -33,7 +36,8 @@ server.registerTool(
       "Devuelve: totalCount, count, offset, limit, hasMore, nextOffset, truncated y rows. Si hasMore es true, repite la llamada con offset = nextOffset. Las respuestas de más de 25000 caracteres se truncan (truncated = true).\n\n" +
       "Ejemplo: { \"query\": \"SELECT id, name FROM customers ORDER BY id\", \"limit\": 20, \"offset\": 20 }.\n\n" +
       "Si la validación rechaza la consulta, el error nombra la regla incumplida.\n\n" +
-      "Si MYSQL_ACCESS_MODE no es exactamente readwrite, INSERT, UPDATE y DELETE se rechazan.",
+      "Si MYSQL_ACCESS_MODE no es exactamente readwrite, INSERT, UPDATE y DELETE se rechazan.\n\n" +
+      "El argumento database debe estar permitido por MYSQL_ALLOWED_DATABASES, y una base marcada :ro rechaza las escrituras.",
     inputSchema: QuerySchema,
     outputSchema: QueryOutputSchema,
     annotations: toolAnnotations(accessMode),
@@ -57,10 +61,24 @@ server.registerTool(
       };
     }
 
+    const authorization = authorizeDatabase({
+      requested: database,
+      configured: configuredDatabase,
+      allowlist,
+      sql: query,
+      mode: accessMode,
+    });
+    if (!authorization.ok) {
+      return {
+        content: [{ type: "text", text: authorization.error }],
+        isError: true,
+      };
+    }
+
     try {
       const p = getPool();
-      if (database) {
-        await p.query("USE ??", [database]);
+      if (authorization.useDatabase) {
+        await p.query("USE ??", [authorization.useDatabase]);
       }
       const [rows] = await p.query(query);
       const { text, output } = formatQueryResult({

@@ -25,6 +25,7 @@ Conexión mediante variables de entorno. Puedes crear un `.env` en la raíz (no 
 | `MYSQL_PASSWORD` | (vacío)     | Contraseña               |
 | `MYSQL_DATABASE` | (opcional)  | Base de datos por defecto|
 | `MYSQL_ACCESS_MODE` | readonly | Solo el valor exacto `readwrite` habilita `INSERT`, `UPDATE` y `DELETE`. Cualquier otro valor, o la variable ausente, es solo lectura |
+| `MYSQL_ALLOWED_DATABASES` | (vacío) | Vacío o ausente: la herramienta puede usar `MYSQL_DATABASE` pero no cambiar a otra base. Lista separada por comas de `nombre`, `nombre:ro` o `nombre:rw` |
 
 Ejemplo `.env`:
 
@@ -35,6 +36,7 @@ MYSQL_USER=root
 MYSQL_PASSWORD=tu_password
 MYSQL_DATABASE=mi_base
 MYSQL_ACCESS_MODE=readonly
+MYSQL_ALLOWED_DATABASES=
 ```
 
 ## Uso en Cursor
@@ -62,7 +64,8 @@ MYSQL_ACCESS_MODE=readonly
            "MYSQL_USER": "root",
            "MYSQL_PASSWORD": "",
            "MYSQL_DATABASE": "tu_base",
-           "MYSQL_ACCESS_MODE": "readonly"
+           "MYSQL_ACCESS_MODE": "readonly",
+           "MYSQL_ALLOWED_DATABASES": ""
          }
        }
      }
@@ -82,7 +85,8 @@ MYSQL_ACCESS_MODE=readonly
            "MYSQL_USER": "root",
            "MYSQL_PASSWORD": "",
            "MYSQL_DATABASE": "tu_base",
-           "MYSQL_ACCESS_MODE": "readonly"
+           "MYSQL_ACCESS_MODE": "readonly",
+           "MYSQL_ALLOWED_DATABASES": ""
          }
        }
      }
@@ -131,6 +135,8 @@ Ejemplos de `SHOW` permitidos: `SHOW TABLES`, `SHOW DATABASES`, `SHOW COLUMNS`, 
 ### Restricciones de seguridad
 
 - El servidor es de solo lectura por defecto. Las escrituras (`INSERT`, `UPDATE`, `DELETE`) requieren `MYSQL_ACCESS_MODE=readwrite`; el valor se lee al arrancar, así que cambiarlo exige reiniciar el MCP.
+- Una base marcada `:ro` en `MYSQL_ALLOWED_DATABASES` rechaza las escrituras incluso con `MYSQL_ACCESS_MODE=readwrite`. Marcar una base como `:rw` no anula un proceso de solo lectura. La lista se lee al arrancar.
+- Un nombre calificado como `otra_base.tabla` dentro del SQL no se comprueba contra `MYSQL_ALLOWED_DATABASES`.
 - Con las escrituras activadas, `UPDATE` y `DELETE` **deben** incluir una cláusula `WHERE`.
 - Se rechazan `WHERE` siempre verdaderos (`WHERE 1=1`, `WHERE TRUE`, `WHERE 1`, `WHERE 'a'='a'`).
 - No se permiten múltiples sentencias en una sola consulta.
