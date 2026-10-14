@@ -4,7 +4,9 @@ import { createPool, getMysqlConfig, type Pool } from "./db.js";
 import { formatQueryResult, QueryOutputSchema, type QueryOutput } from "./format-result.js";
 import { QuerySchema } from "./query-schema.js";
 import { toActionableSqlError } from "./sql-error.js";
-import { validateQuery } from "./sql-validation.js";
+import { gateQuery, resolveAccessMode, toolAnnotations } from "./access-mode.js";
+
+const accessMode = resolveAccessMode(process.env.MYSQL_ACCESS_MODE);
 
 let pool: Pool | null = null;
 
@@ -30,15 +32,11 @@ server.registerTool(
       "Argumentos: query (una sola sentencia), database (opcional, USE previo), limit (filas por página, 1-100, por defecto 20), offset (filas a saltar, por defecto 0) y response_format ('markdown' o 'json'). limit y offset paginan las filas ya devueltas; no modifican el SQL.\n\n" +
       "Devuelve: totalCount, count, offset, limit, hasMore, nextOffset, truncated y rows. Si hasMore es true, repite la llamada con offset = nextOffset. Las respuestas de más de 25000 caracteres se truncan (truncated = true).\n\n" +
       "Ejemplo: { \"query\": \"SELECT id, name FROM customers ORDER BY id\", \"limit\": 20, \"offset\": 20 }.\n\n" +
-      "Si la validación rechaza la consulta, el error nombra la regla incumplida.",
+      "Si la validación rechaza la consulta, el error nombra la regla incumplida.\n\n" +
+      "Si MYSQL_ACCESS_MODE no es exactamente readwrite, INSERT, UPDATE y DELETE se rechazan.",
     inputSchema: QuerySchema,
     outputSchema: QueryOutputSchema,
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: true,
-      idempotentHint: false,
-      openWorldHint: true,
-    },
+    annotations: toolAnnotations(accessMode),
   },
   async ({
     query,
@@ -51,7 +49,7 @@ server.registerTool(
     structuredContent?: QueryOutput;
     isError?: boolean;
   }> => {
-    const validation = validateQuery(query);
+    const validation = gateQuery(query, accessMode);
     if (!validation.allowed) {
       return {
         content: [{ type: "text", text: validation.error ?? "Consulta no permitida." }],

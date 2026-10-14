@@ -24,6 +24,7 @@ Conexión mediante variables de entorno. Puedes crear un `.env` en la raíz (no 
 | `MYSQL_USER`     | root        | Usuario                  |
 | `MYSQL_PASSWORD` | (vacío)     | Contraseña               |
 | `MYSQL_DATABASE` | (opcional)  | Base de datos por defecto|
+| `MYSQL_ACCESS_MODE` | readonly | Solo el valor exacto `readwrite` habilita `INSERT`, `UPDATE` y `DELETE`. Cualquier otro valor, o la variable ausente, es solo lectura |
 
 Ejemplo `.env`:
 
@@ -33,6 +34,7 @@ MYSQL_PORT=3306
 MYSQL_USER=root
 MYSQL_PASSWORD=tu_password
 MYSQL_DATABASE=mi_base
+MYSQL_ACCESS_MODE=readonly
 ```
 
 ## Uso en Cursor
@@ -59,7 +61,8 @@ MYSQL_DATABASE=mi_base
            "MYSQL_HOST": "localhost",
            "MYSQL_USER": "root",
            "MYSQL_PASSWORD": "",
-           "MYSQL_DATABASE": "tu_base"
+           "MYSQL_DATABASE": "tu_base",
+           "MYSQL_ACCESS_MODE": "readonly"
          }
        }
      }
@@ -78,7 +81,8 @@ MYSQL_DATABASE=mi_base
            "MYSQL_HOST": "localhost",
            "MYSQL_USER": "root",
            "MYSQL_PASSWORD": "",
-           "MYSQL_DATABASE": "tu_base"
+           "MYSQL_DATABASE": "tu_base",
+           "MYSQL_ACCESS_MODE": "readonly"
          }
        }
      }
@@ -126,7 +130,8 @@ Ejemplos de `SHOW` permitidos: `SHOW TABLES`, `SHOW DATABASES`, `SHOW COLUMNS`, 
 
 ### Restricciones de seguridad
 
-- `UPDATE` y `DELETE` **deben** incluir una cláusula `WHERE`.
+- El servidor es de solo lectura por defecto. Las escrituras (`INSERT`, `UPDATE`, `DELETE`) requieren `MYSQL_ACCESS_MODE=readwrite`; el valor se lee al arrancar, así que cambiarlo exige reiniciar el MCP.
+- Con las escrituras activadas, `UPDATE` y `DELETE` **deben** incluir una cláusula `WHERE`.
 - Se rechazan `WHERE` siempre verdaderos (`WHERE 1=1`, `WHERE TRUE`, `WHERE 1`, `WHERE 'a'='a'`).
 - No se permiten múltiples sentencias en una sola consulta.
 - Se bloquean comandos destructivos: `DROP`, `TRUNCATE`, `ALTER`, `CREATE`, `REPLACE`, `RENAME`, `GRANT`, `REVOKE`, `LOAD DATA`, `FLUSH`, `RESET`, `PREPARE`, etc.
