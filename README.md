@@ -27,6 +27,13 @@ Conexión mediante variables de entorno. Puedes crear un `.env` en la raíz (no 
 | `MYSQL_ACCESS_MODE` | readonly | Solo el valor exacto `readwrite` habilita `INSERT`, `UPDATE` y `DELETE`. Cualquier otro valor, o la variable ausente, es solo lectura |
 | `MYSQL_ALLOWED_DATABASES` | (vacío) | Vacío o ausente: la herramienta puede usar `MYSQL_DATABASE` pero no cambiar a otra base. Lista separada por comas de `nombre`, `nombre:ro` o `nombre:rw` |
 | `MYSQL_PII_COLUMNS` | (vacío) | Nombres extra de columna, separados por comas. `email`, `correo`, `phone`, `telefono`, `password`, `contrasena`, `ssn`, `nss` y `token` ya se enmascaran. Un token con espacios o signos se ignora; el resto sigue aplicando. |
+| `MYSQL_SSL` | (vacío) | Solo el valor exacto `required` activa TLS. Cualquier otro valor no vacío es un error. Vacío o ausente: sin TLS |
+| `MYSQL_SSL_CA` | (opcional) | Ruta a un archivo PEM con la CA. Con `MYSQL_SSL=required`, el archivo debe existir y poder leerse |
+| `MYSQL_SSL_CERT` | (opcional) | Ruta al certificado de cliente (mTLS). Exige definir también `MYSQL_SSL_KEY` |
+| `MYSQL_SSL_KEY` | (opcional) | Ruta a la clave privada de cliente (mTLS). Exige definir también `MYSQL_SSL_CERT` |
+| `MYSQL_SSL_REJECT_UNAUTHORIZED` | true | Solo el valor exacto `false` desactiva la verificación del certificado del servidor. Cualquier otro valor la mantiene activa |
+
+Las variables `MYSQL_SSL*` solo aceptan rutas a archivos PEM en disco, nunca el contenido del certificado. Se leen una sola vez, al crear el pool de conexiones (en la primera consulta tras arrancar el servidor); cambiarlas exige reiniciar el MCP. `rejectUnauthorized` es `true` por defecto cuando TLS está activo. MariaDB usa el mismo cliente mysql2, por lo que la configuración es idéntica.
 
 Ejemplo `.env`:
 
