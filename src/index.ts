@@ -3,6 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { createPool, getMysqlConfig, type Pool } from "./db.js";
 import { formatQueryResult, QueryOutputSchema, type QueryOutput } from "./format-result.js";
 import { QuerySchema } from "./query-schema.js";
+import { CatalogSchema, prepareCatalog } from "./catalog.js";
 import { toActionableSqlError } from "./sql-error.js";
 import { gateQuery, resolveAccessMode, toolAnnotations } from "./access-mode.js";
 import { authorizeDatabase, parseAllowlist } from "./schema-permissions.js";
@@ -84,6 +85,73 @@ server.registerTool(
         await p.query("USE ??", [authorization.useDatabase]);
       }
       const [rows] = await p.query(query);
+      const { text, output } = formatQueryResult({
+        rows,
+        limit,
+        offset,
+        responseFormat: response_format,
+        piiColumns,
+      });
+      return {
+        content: [{ type: "text", text }],
+        structuredContent: output,
+      };
+    } catch (err) {
+      return {
+        content: [{ type: "text", text: toActionableSqlError(err) }],
+        isError: true,
+      };
+    }
+  }
+);
+
+server.registerTool(
+  "mysql_catalog",
+  {
+    title: "Consultar catálogo",
+    description:
+      "Devuelve metadatos y la definición de una vista, trigger, función o procedimiento desde information_schema.\n\n" +
+      "Argumentos: kind ('view', 'trigger', 'function' o 'procedure'), name (opcional; si se omite, lista todos los objetos de ese tipo), database (opcional), limit (1-100, por defecto 20), offset (por defecto 0) y response_format ('markdown' o 'json').\n\n" +
+      "El argumento database sigue MYSQL_ALLOWED_DATABASES. El nombre del objeto no se escribe en el texto SQL: viaja como parámetro. No se aceptan CALL ni CREATE.\n\n" +
+      "Ejemplo: { \"kind\": \"view\", \"name\": \"clientes_activos\" }.",
+    inputSchema: CatalogSchema,
+    outputSchema: QueryOutputSchema,
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+  },
+  async ({
+    kind,
+    name,
+    database,
+    limit,
+    offset,
+    response_format,
+  }): Promise<{
+    content: { type: "text"; text: string }[];
+    structuredContent?: QueryOutput;
+    isError?: boolean;
+  }> => {
+    const prepared = prepareCatalog({
+      kind,
+      name,
+      database,
+      configured: configuredDatabase,
+      allowlist,
+      mode: accessMode,
+    });
+    if (!prepared.ok) {
+      return {
+        content: [{ type: "text", text: prepared.error }],
+        isError: true,
+      };
+    }
+
+    try {
+      const [rows] = await getPool().query(prepared.sql, prepared.params);
       const { text, output } = formatQueryResult({
         rows,
         limit,

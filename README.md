@@ -109,6 +109,11 @@ MYSQL_PII_COLUMNS=
   - `limit`: (opcional) filas por página, por defecto 20, máximo 100.
   - `offset`: (opcional) filas a saltar antes de la página, por defecto 0.
   - `response_format`: (opcional) `markdown` (por defecto) o `json`.
+- **mysql_catalog**: lee la definición de vistas, triggers, funciones y procedimientos desde `information_schema`.
+  - `kind`: `view`, `trigger`, `function` o `procedure`.
+  - `name`: (opcional) nombre del objeto; solo letras, números y guion bajo. Si falta, lista todos los objetos de ese tipo. El servidor lo envía como parámetro, no lo escribe en el SQL.
+  - `database`: (opcional) base a consultar; debe estar permitida por `MYSQL_ALLOWED_DATABASES`. Si no se indica, se usa `MYSQL_DATABASE`.
+  - `limit`, `offset` y `response_format`: igual que en `mysql_query`.
 
 `limit` y `offset` paginan las filas que ya devolvió MySQL; no reescriben el SQL.
 
@@ -134,13 +139,14 @@ Una respuesta de texto de más de 25000 caracteres se corta y se marca como `tru
 | Lectura | `SELECT`, `WITH`, `SHOW`, `DESCRIBE` / `DESC`, `EXPLAIN`, `ANALYZE`, `CHECK`, `CHECKSUM` |
 | Escritura | `INSERT` · `UPDATE` / `DELETE` (requieren `WHERE`) |
 
-Ejemplos de `SHOW` permitidos: `SHOW TABLES`, `SHOW DATABASES`, `SHOW COLUMNS`, `SHOW INDEX`, `SHOW CREATE TABLE`, `SHOW TABLE STATUS`, `SHOW STATUS`, `SHOW CHARACTER SET`, `SHOW COLLATION`, `SHOW ENGINES`, `SHOW WARNINGS`, `SHOW ERRORS`, `SHOW OPEN TABLES`.
+Ejemplos de `SHOW` permitidos: `SHOW TABLES`, `SHOW DATABASES`, `SHOW COLUMNS`, `SHOW INDEX`, `SHOW CREATE TABLE`, `SHOW TABLE STATUS`, `SHOW STATUS`, `SHOW CHARACTER SET`, `SHOW COLLATION`, `SHOW ENGINES`, `SHOW WARNINGS`, `SHOW ERRORS`, `SHOW OPEN TABLES`, `SHOW TRIGGERS`, `SHOW FUNCTION STATUS`, `SHOW PROCEDURE STATUS`, `SHOW CREATE VIEW`, `SHOW CREATE TRIGGER`, `SHOW CREATE FUNCTION`, `SHOW CREATE PROCEDURE`.
 
 ### Restricciones de seguridad
 
 - El servidor es de solo lectura por defecto. Las escrituras (`INSERT`, `UPDATE`, `DELETE`) requieren `MYSQL_ACCESS_MODE=readwrite`; el valor se lee al arrancar, así que cambiarlo exige reiniciar el MCP.
 - Una base marcada `:ro` en `MYSQL_ALLOWED_DATABASES` rechaza las escrituras incluso con `MYSQL_ACCESS_MODE=readwrite`. Marcar una base como `:rw` no anula un proceso de solo lectura. La lista se lee al arrancar.
 - Un nombre calificado como `otra_base.tabla` dentro del SQL no se comprueba contra `MYSQL_ALLOWED_DATABASES`.
+- `mysql_catalog` solo lee `information_schema`. No ejecuta `CALL` ni `CREATE`. El nombre del objeto no se concatena en el SQL.
 - Las columnas `email`, `correo`, `phone`, `telefono`, `password`, `contrasena`, `ssn`, `nss` y `token`, más las de `MYSQL_PII_COLUMNS`, se devuelven como `***`. Eso aplica al texto y a `structuredContent`. Una columna como `notes` no se inspecciona, aunque el texto parezca un correo.
 - Con las escrituras activadas, `UPDATE` y `DELETE` **deben** incluir una cláusula `WHERE`.
 - Se rechazan `WHERE` siempre verdaderos (`WHERE 1=1`, `WHERE TRUE`, `WHERE 1`, `WHERE 'a'='a'`).

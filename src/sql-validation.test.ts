@@ -172,6 +172,13 @@ describe("validateQuery", () => {
       "SHOW WARNINGS",
       "SHOW ERRORS",
       "SHOW OPEN TABLES",
+      "SHOW TRIGGERS",
+      "SHOW FUNCTION STATUS",
+      "SHOW PROCEDURE STATUS",
+      "SHOW CREATE VIEW v",
+      "SHOW CREATE TRIGGER tr",
+      "SHOW CREATE FUNCTION f",
+      "SHOW CREATE PROCEDURE p",
       "DESCRIBE users",
       "DESC users",
       "EXPLAIN SELECT * FROM users",
@@ -243,6 +250,8 @@ describe("validateQuery", () => {
       "CREATE TABLE evil (id INT)",
       "RENAME TABLE users TO old_users",
       "REPLACE INTO users VALUES (1)",
+      "CALL p()",
+      "CALL p",
     ])("bloquea: %s", (sql) => {
       const result = validateQuery(sql);
       expect(result.allowed).toBe(false);
