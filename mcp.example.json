@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "mysql": {
+      "command": "node",
+      "args": ["c:/DevKit/www/mysql-mcp-serve/dist/index.js"],
+      "env": {
+        "MYSQL_HOST": "localhost",
+        "MYSQL_PORT": "3306",
+        "MYSQL_USER": "app",
+        "MYSQL_PASSWORD": "tu_password",
+        "MYSQL_DATABASE": "tienda",
+        "MYSQL_ACCESS_MODE": "readonly",
+        "MYSQL_ALLOWED_DATABASES": "tienda,analytics:ro",
+        "MYSQL_PII_COLUMNS": "dni"
+      }
+    }
+  }
+}
