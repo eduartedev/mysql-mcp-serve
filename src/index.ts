@@ -6,9 +6,11 @@ import { QuerySchema } from "./query-schema.js";
 import { toActionableSqlError } from "./sql-error.js";
 import { gateQuery, resolveAccessMode, toolAnnotations } from "./access-mode.js";
 import { authorizeDatabase, parseAllowlist } from "./schema-permissions.js";
+import { parsePiiColumns } from "./pii.js";
 
 const accessMode = resolveAccessMode(process.env.MYSQL_ACCESS_MODE);
 const allowlist = parseAllowlist(process.env.MYSQL_ALLOWED_DATABASES);
+const piiColumns = parsePiiColumns(process.env.MYSQL_PII_COLUMNS);
 const configuredDatabase = getMysqlConfig().database;
 
 let pool: Pool | null = null;
@@ -37,7 +39,8 @@ server.registerTool(
       "Ejemplo: { \"query\": \"SELECT id, name FROM customers ORDER BY id\", \"limit\": 20, \"offset\": 20 }.\n\n" +
       "Si la validación rechaza la consulta, el error nombra la regla incumplida.\n\n" +
       "Si MYSQL_ACCESS_MODE no es exactamente readwrite, INSERT, UPDATE y DELETE se rechazan.\n\n" +
-      "El argumento database debe estar permitido por MYSQL_ALLOWED_DATABASES, y una base marcada :ro rechaza las escrituras.",
+      "El argumento database debe estar permitido por MYSQL_ALLOWED_DATABASES, y una base marcada :ro rechaza las escrituras. " +
+      "Las columnas email, correo, phone, telefono, password, contrasena, ssn, nss y token, más las de MYSQL_PII_COLUMNS, se devuelven como ***. El texto de otras columnas no se inspecciona.",
     inputSchema: QuerySchema,
     outputSchema: QueryOutputSchema,
     annotations: toolAnnotations(accessMode),
@@ -86,6 +89,7 @@ server.registerTool(
         limit,
         offset,
         responseFormat: response_format,
+        piiColumns,
       });
       return {
         content: [{ type: "text", text }],

@@ -26,6 +26,7 @@ Conexión mediante variables de entorno. Puedes crear un `.env` en la raíz (no 
 | `MYSQL_DATABASE` | (opcional)  | Base de datos por defecto|
 | `MYSQL_ACCESS_MODE` | readonly | Solo el valor exacto `readwrite` habilita `INSERT`, `UPDATE` y `DELETE`. Cualquier otro valor, o la variable ausente, es solo lectura |
 | `MYSQL_ALLOWED_DATABASES` | (vacío) | Vacío o ausente: la herramienta puede usar `MYSQL_DATABASE` pero no cambiar a otra base. Lista separada por comas de `nombre`, `nombre:ro` o `nombre:rw` |
+| `MYSQL_PII_COLUMNS` | (vacío) | Nombres extra de columna, separados por comas. `email`, `correo`, `phone`, `telefono`, `password`, `contrasena`, `ssn`, `nss` y `token` ya se enmascaran. Un token con espacios o signos se ignora; el resto sigue aplicando. |
 
 Ejemplo `.env`:
 
@@ -37,6 +38,7 @@ MYSQL_PASSWORD=tu_password
 MYSQL_DATABASE=mi_base
 MYSQL_ACCESS_MODE=readonly
 MYSQL_ALLOWED_DATABASES=
+MYSQL_PII_COLUMNS=
 ```
 
 ## Uso en Cursor
@@ -65,7 +67,8 @@ MYSQL_ALLOWED_DATABASES=
            "MYSQL_PASSWORD": "",
            "MYSQL_DATABASE": "tu_base",
            "MYSQL_ACCESS_MODE": "readonly",
-           "MYSQL_ALLOWED_DATABASES": ""
+           "MYSQL_ALLOWED_DATABASES": "",
+           "MYSQL_PII_COLUMNS": "dni"
          }
        }
      }
@@ -86,7 +89,8 @@ MYSQL_ALLOWED_DATABASES=
            "MYSQL_PASSWORD": "",
            "MYSQL_DATABASE": "tu_base",
            "MYSQL_ACCESS_MODE": "readonly",
-           "MYSQL_ALLOWED_DATABASES": ""
+           "MYSQL_ALLOWED_DATABASES": "",
+           "MYSQL_PII_COLUMNS": "dni"
          }
        }
      }
@@ -95,7 +99,7 @@ MYSQL_ALLOWED_DATABASES=
 
    Ajusta la ruta (`c:/laragon/www/mysql-mcp-serve`) a la ruta real del proyecto en tu máquina.
 
-3. Reinicia Cursor o recarga MCP para que detecte el servidor.
+3. Reinicia Cursor o recarga MCP para que detecte el servidor. `MYSQL_ACCESS_MODE`, `MYSQL_ALLOWED_DATABASES` y `MYSQL_PII_COLUMNS` se leen al arrancar: un cambio posterior no aplica hasta ese reinicio.
 
 ## Herramienta disponible
 
@@ -137,6 +141,7 @@ Ejemplos de `SHOW` permitidos: `SHOW TABLES`, `SHOW DATABASES`, `SHOW COLUMNS`, 
 - El servidor es de solo lectura por defecto. Las escrituras (`INSERT`, `UPDATE`, `DELETE`) requieren `MYSQL_ACCESS_MODE=readwrite`; el valor se lee al arrancar, así que cambiarlo exige reiniciar el MCP.
 - Una base marcada `:ro` en `MYSQL_ALLOWED_DATABASES` rechaza las escrituras incluso con `MYSQL_ACCESS_MODE=readwrite`. Marcar una base como `:rw` no anula un proceso de solo lectura. La lista se lee al arrancar.
 - Un nombre calificado como `otra_base.tabla` dentro del SQL no se comprueba contra `MYSQL_ALLOWED_DATABASES`.
+- Las columnas `email`, `correo`, `phone`, `telefono`, `password`, `contrasena`, `ssn`, `nss` y `token`, más las de `MYSQL_PII_COLUMNS`, se devuelven como `***`. Eso aplica al texto y a `structuredContent`. Una columna como `notes` no se inspecciona, aunque el texto parezca un correo.
 - Con las escrituras activadas, `UPDATE` y `DELETE` **deben** incluir una cláusula `WHERE`.
 - Se rechazan `WHERE` siempre verdaderos (`WHERE 1=1`, `WHERE TRUE`, `WHERE 1`, `WHERE 'a'='a'`).
 - No se permiten múltiples sentencias en una sola consulta.

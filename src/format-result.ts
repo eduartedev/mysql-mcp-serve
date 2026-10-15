@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CHARACTER_LIMIT } from "./constants.js";
+import { isPiiColumn, parsePiiColumns } from "./pii.js";
 
 export const QueryOutputSchema = z
   .object({
@@ -23,6 +24,7 @@ export interface FormatQueryInput {
   limit: number;
   offset: number;
   responseFormat: ResponseFormat;
+  piiColumns?: ReadonlySet<string>;
 }
 
 export interface FormattedQueryResult {
@@ -52,6 +54,19 @@ function toPlainRow(value: unknown): Record<string, unknown> {
     plain[key] = entry;
   }
   return plain;
+}
+
+const MASK = "***";
+
+function maskRow(
+  row: Record<string, unknown>,
+  names: ReadonlySet<string>,
+): Record<string, unknown> {
+  const masked: Record<string, unknown> = {};
+  for (const key of Object.keys(row)) {
+    masked[key] = isPiiColumn(key, names) ? MASK : row[key];
+  }
+  return masked;
 }
 
 function bigintReplacer(_key: string, value: unknown): unknown {
@@ -90,11 +105,12 @@ function buildMarkdown(output: QueryOutput, firstRowIsPlain: boolean): string {
 
 export function formatQueryResult(input: FormatQueryInput): FormattedQueryResult {
   const { rows, limit, offset, responseFormat } = input;
+  const piiNames = input.piiColumns ?? parsePiiColumns(undefined);
   const all: unknown[] = Array.isArray(rows) ? rows : [rows];
   const totalCount = all.length;
     const rawPage = all.slice(offset, offset + limit);
   const firstRowIsPlain = rawPage.length > 0 && isPlainObject(rawPage[0]);
-  const page = rawPage.map(toPlainRow);
+  const page = rawPage.map((row) => maskRow(toPlainRow(row), piiNames));
   const count = page.length;
   const hasMore = offset + count < totalCount;
 
