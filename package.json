@@ -1,11 +1,22 @@
 {
-  "name": "mysql-mcp-server",
+  "name": "@eduartedev/mysql-mcp-server",
   "version": "1.0.0",
   "description": "MCP server to query and explore a local MySQL database",
   "type": "module",
   "main": "dist/index.js",
+  "bin": {
+    "mysql-mcp-server": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eduartedev/mysql-mcp-serve.git"
+  },
   "scripts": {
     "build": "tsc",
+    "prepublishOnly": "npm run build",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"

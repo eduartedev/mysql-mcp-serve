@@ -50,6 +50,34 @@ MYSQL_PII_COLUMNS=
 
 ## Uso en Cursor
 
+### Sin clonar el repositorio (npm + npx)
+
+Con Node.js >= 18 instalado, en **Cursor Settings** → **MCP**:
+
+```json
+{
+  "mcpServers": {
+    "mysql": {
+      "command": "npx",
+      "args": ["-y", "@eduartedev/mysql-mcp-server"],
+      "env": {
+        "MYSQL_HOST": "localhost",
+        "MYSQL_USER": "root",
+        "MYSQL_PASSWORD": "",
+        "MYSQL_DATABASE": "tu_base",
+        "MYSQL_ACCESS_MODE": "readonly",
+        "MYSQL_ALLOWED_DATABASES": "",
+        "MYSQL_PII_COLUMNS": ""
+      }
+    }
+  }
+}
+```
+
+La primera vez, `npx` descarga el paquete del registry; no hace falta tener el repo en disco. Reinicia Cursor o recarga MCP tras guardar.
+
+### Desarrollo local (clonando el repo)
+
 1. **Compilar** (opcional si usas `tsx` en el paso 2):
 
    ```bash
