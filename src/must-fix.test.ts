@@ -70,4 +70,33 @@ describe("must-fix audit", () => {
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.stripped.toUpperCase()).toBe("SELECT SLE EP(5)");
   });
+
+  it("bloquea mysql.user con comillas, espacios o comentario", () => {
+    const base = {
+      requested: "app" as const,
+      configured: "app",
+      allowlist: parseAllowlist("app"),
+      mode: "readonly" as const,
+    };
+    for (const sql of [
+      "SELECT * FROM `mysql`.`user`",
+      "SELECT * FROM mysql . user",
+      "SELECT * FROM/**/mysql.user",
+      'SELECT * FROM "mysql"."user"',
+    ]) {
+      expect(authorizeDatabase({ ...base, sql }).ok).toBe(false);
+    }
+  });
+
+  it("bloquea UPDATE a una base :ro por el nombre calificado", () => {
+    const r = authorizeDatabase({
+      requested: "tienda",
+      configured: "tienda",
+      allowlist: parseAllowlist("tienda,analytics:ro"),
+      sql: "UPDATE analytics.events SET name = 'x' WHERE id = 1",
+      mode: "readwrite",
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toContain(":ro");
+  });
 });

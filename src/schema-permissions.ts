@@ -1,7 +1,7 @@
 import type { AccessMode } from "./access-mode.js";
 import { assertSqlSchemasAllowed } from "./sql-schema-refs.js";
 import { stripSqlLiteralsAndComments } from "./sql-normalize.js";
-import { isWriteQuery } from "./sql-validation.js";
+import { getMainStatementKeyword, isWriteQuery } from "./sql-validation.js";
 
 export type SchemaPolicy = "inherit" | "ro" | "rw";
 
@@ -112,6 +112,9 @@ export function authorizeDatabase(input: AuthorizeInput): AuthorizeResult {
     strippedResult.stripped,
     allowlist,
     effective,
+    isWriteQuery(strippedResult.stripped),
+    getMainStatementKeyword(strippedResult.stripped) === "DELETE",
+    sql,
   );
   if (!schemaCheck.ok) return { ok: false, error: schemaCheck.error };
 

@@ -117,6 +117,29 @@ describe("authorizeDatabase con lista app, analytics:ro y mode readwrite", () =>
     expect(result.ok).toBe(false);
   });
 
+  it("permite copiar desde analytics :ro hacia tienda", () => {
+    const result = authorizeDatabase({
+      requested: "tienda",
+      configured: "tienda",
+      allowlist: parseAllowlist("tienda,analytics:ro"),
+      mode: "readwrite",
+      sql: "INSERT INTO tienda.copia SELECT * FROM analytics.events",
+    });
+    expect(result.ok).toBe(true);
+  });
+
+  it("rechaza DELETE sobre analytics :ro", () => {
+    const result = authorizeDatabase({
+      requested: "tienda",
+      configured: "tienda",
+      allowlist: parseAllowlist("tienda,analytics:ro"),
+      mode: "readwrite",
+      sql: "DELETE FROM analytics.events WHERE id = 1",
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain(":ro");
+  });
+
   it("aplica :ro a la base configurada cuando requested se omite", () => {
     const result = authorizeDatabase({
       ...base,

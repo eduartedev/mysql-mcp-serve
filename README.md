@@ -179,8 +179,8 @@ Ejemplos de `SHOW` permitidos: `SHOW TABLES`, `SHOW DATABASES`, `SHOW COLUMNS`, 
 ### Restricciones de seguridad
 
 - El servidor es de solo lectura por defecto. Las escrituras (`INSERT`, `UPDATE`, `DELETE`) requieren `MYSQL_ACCESS_MODE=readwrite`; el valor se lee al arrancar, así que cambiarlo exige reiniciar el MCP.
-- Una base marcada `:ro` en `MYSQL_ALLOWED_DATABASES` rechaza las escrituras incluso con `MYSQL_ACCESS_MODE=readwrite`. Marcar una base como `:rw` no anula un proceso de solo lectura. La lista se lee al arrancar.
-- Un nombre calificado como `otra_base.tabla` dentro del SQL no se comprueba contra `MYSQL_ALLOWED_DATABASES`.
+- Una base marcada `:ro` en `MYSQL_ALLOWED_DATABASES` rechaza las escrituras incluso con `MYSQL_ACCESS_MODE=readwrite`. Eso incluye un nombre calificado (`analytics.tabla`) escrito desde otra base. Marcar una base como `:rw` no anula un proceso de solo lectura. La lista se lee al arrancar.
+- Un nombre calificado (`otra_base.tabla`, con espacios, comillas invertidas o comillas dobles) se comprueba contra `MYSQL_ALLOWED_DATABASES`. También `SHOW CREATE`, `DESCRIBE`, `SHOW TABLES FROM`, `ANALYZE TABLE`, `CHECK TABLE` y `CHECKSUM TABLE`.
 - `mysql_catalog` solo lee `information_schema`. No ejecuta `CALL` ni `CREATE`. El nombre del objeto no se concatena en el SQL.
 - Las columnas `email`, `correo`, `phone`, `telefono`, `password`, `contrasena`, `ssn`, `nss` y `token`, más las de `MYSQL_PII_COLUMNS`, se devuelven como `***`. Eso aplica al texto y a `structuredContent`. Una columna como `notes` no se inspecciona, aunque el texto parezca un correo.
 - Con las escrituras activadas, `UPDATE` y `DELETE` **deben** incluir una cláusula `WHERE`.
