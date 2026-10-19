@@ -236,6 +236,8 @@ describe("validateQuery", () => {
       "DELETE FROM users WHERE TRUE",
       "DELETE FROM users WHERE 1",
       "UPDATE users SET x = 1 WHERE 'a'='a'",
+      "SELECT * FROM t) INTO/**/OUTFILE 'C:/tmp/x.csv' --",
+      "SELECT/*!50000 LOAD_FILE('C:/Windows/win.ini') */",
     ])("bloquea: %s", (sql) => {
       const result = validateQuery(sql);
       expect(result.allowed).toBe(false);

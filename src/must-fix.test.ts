@@ -23,8 +23,9 @@ describe("must-fix audit", () => {
     expect(calls).toEqual(["USE:db", "SELECT 1"]);
   });
 
-  it("2 bloquea SLEEP con comentario", () => {
-    expect(validateQuery("SELECT SLE/**/EP(1)").allowed).toBe(false);
+  it("2 bloquea comentario ejecutable y INTO OUTFILE pegado", () => {
+    expect(validateQuery("SELECT/*!50000 LOAD_FILE('C:/Windows/win.ini') */").allowed).toBe(false);
+    expect(validateQuery("SELECT * FROM t) INTO/**/OUTFILE 'C:/tmp/x.csv' --").allowed).toBe(false);
   });
 
   it("3 bloquea UPDATE sin WHERE real", () => {
@@ -64,9 +65,9 @@ describe("must-fix audit", () => {
     expect(sql).toMatch(/LIMIT 6/i);
   });
 
-  it("strip une SLEEP", () => {
+  it("strip separa un comentario con un espacio", () => {
     const r = stripSqlLiteralsAndComments("SELECT SLE/**/EP(5)");
     expect(r.ok).toBe(true);
-    if (r.ok) expect(r.stripped.toUpperCase()).toContain("SLEEP(5)");
+    if (r.ok) expect(r.stripped.toUpperCase()).toBe("SELECT SLE EP(5)");
   });
 });
