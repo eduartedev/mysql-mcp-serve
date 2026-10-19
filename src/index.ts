@@ -10,6 +10,9 @@ import { toActionableSqlError } from "./sql-error.js";
 import { resolveAccessMode, toolAnnotations } from "./access-mode.js";
 import { parseAllowlist } from "./schema-permissions.js";
 import { parsePiiColumns } from "./pii.js";
+import { loadMysqlEnvFile } from "./load-env.js";
+
+loadMysqlEnvFile();
 
 const accessMode = resolveAccessMode(process.env.MYSQL_ACCESS_MODE);
 const allowlist = parseAllowlist(process.env.MYSQL_ALLOWED_DATABASES);

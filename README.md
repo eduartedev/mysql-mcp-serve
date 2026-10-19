@@ -15,7 +15,7 @@ npm install
 
 ## Configuración
 
-Conexión mediante variables de entorno. Puedes crear un `.env` en la raíz (no se sube a Git) o definirlas donde arranques el MCP.
+Conexión mediante variables de entorno. Al arrancar se lee un `.env` en el directorio de trabajo (no se sube a Git). Solo entran claves `MYSQL_*` que el proceso aún no trae.
 
 | Variable         | Por defecto | Descripción              |
 |------------------|-------------|--------------------------|
