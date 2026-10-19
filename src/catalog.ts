@@ -81,7 +81,7 @@ export interface PrepareCatalogInput {
 }
 
 export type PrepareCatalogResult =
-  | { ok: true; sql: string; params: string[] }
+  | { ok: true; sql: string; params: string[]; useDatabase?: string }
   | { ok: false; error: string };
 
 export function prepareCatalog(input: PrepareCatalogInput): PrepareCatalogResult {
@@ -109,6 +109,16 @@ export function prepareCatalog(input: PrepareCatalogInput): PrepareCatalogResult
 
   const queries = SQL_BY_KIND[kind];
   return hasName
-    ? { ok: true, sql: queries.one, params: [schema, name] }
-    : { ok: true, sql: queries.list, params: [schema] };
+    ? {
+        ok: true,
+        sql: queries.one,
+        params: [schema, name],
+        useDatabase: authorization.useDatabase,
+      }
+    : {
+        ok: true,
+        sql: queries.list,
+        params: [schema],
+        useDatabase: authorization.useDatabase,
+      };
 }

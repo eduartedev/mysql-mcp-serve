@@ -3,11 +3,12 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { createPool, getMysqlConfig, type Pool } from "./db.js";
 import { formatQueryResult, QueryOutputSchema, type QueryOutput } from "./format-result.js";
+import { handleMysqlQuery } from "./query-exec.js";
 import { QuerySchema } from "./query-schema.js";
 import { CatalogSchema, prepareCatalog } from "./catalog.js";
 import { toActionableSqlError } from "./sql-error.js";
-import { gateQuery, resolveAccessMode, toolAnnotations } from "./access-mode.js";
-import { authorizeDatabase, parseAllowlist } from "./schema-permissions.js";
+import { resolveAccessMode, toolAnnotations } from "./access-mode.js";
+import { parseAllowlist } from "./schema-permissions.js";
 import { parsePiiColumns } from "./pii.js";
 
 const accessMode = resolveAccessMode(process.env.MYSQL_ACCESS_MODE);
@@ -36,7 +37,7 @@ server.registerTool(
     title: "Ejecutar consulta SQL",
     description:
       "Ejecuta SQL de lectura (SELECT, WITH, SHOW, DESCRIBE, EXPLAIN, ANALYZE, CHECK, CHECKSUM) y escritura controlada (INSERT; UPDATE/DELETE solo con WHERE). Bloquea DDL destructivo, SHOW sensibles y funciones peligrosas.\n\n" +
-      "Argumentos: query (una sola sentencia), database (opcional, USE previo), limit (filas por página, 1-100, por defecto 20), offset (filas a saltar, por defecto 0) y response_format ('markdown' o 'json'). limit y offset paginan las filas ya devueltas; no modifican el SQL.\n\n" +
+      "Argumentos: query (una sola sentencia), database (opcional, USE previo), limit (filas por página, 1-100, por defecto 20), offset (filas a saltar, por defecto 0) y response_format ('markdown' o 'json'). En SELECT/WITH, limit y offset se aplican en el servidor (subconsulta acotada); el resto pagina en memoria.\n\n" +
       "Devuelve: totalCount, count, offset, limit, hasMore, nextOffset, truncated y rows. Si hasMore es true, repite la llamada con offset = nextOffset. Las respuestas de más de 25000 caracteres se truncan (truncated = true).\n\n" +
       "Ejemplo: { \"query\": \"SELECT id, name FROM customers ORDER BY id\", \"limit\": 20, \"offset\": 20 }.\n\n" +
       "Si la validación rechaza la consulta, el error nombra la regla incumplida.\n\n" +
@@ -58,52 +59,29 @@ server.registerTool(
     structuredContent?: QueryOutput;
     isError?: boolean;
   }> => {
-    const validation = gateQuery(query, accessMode);
-    if (!validation.allowed) {
-      return {
-        content: [{ type: "text", text: validation.error ?? "Consulta no permitida." }],
-        isError: true,
-      };
-    }
-
-    const authorization = authorizeDatabase({
-      requested: database,
-      configured: configuredDatabase,
+    const result = await handleMysqlQuery({
+      pool: getPool(),
+      query,
+      database,
+      limit,
+      offset,
+      response_format,
+      accessMode,
       allowlist,
-      sql: query,
-      mode: accessMode,
+      configuredDatabase,
+      piiColumns,
     });
-    if (!authorization.ok) {
+    if (!result.ok) {
       return {
-        content: [{ type: "text", text: authorization.error }],
+        content: [{ type: "text", text: result.text }],
         isError: true,
       };
     }
-
-    try {
-      const p = getPool();
-      if (authorization.useDatabase) {
-        await p.query("USE ??", [authorization.useDatabase]);
-      }
-      const [rows] = await p.query(query);
-      const { text, output } = formatQueryResult({
-        rows,
-        limit,
-        offset,
-        responseFormat: response_format,
-        piiColumns,
-      });
-      return {
-        content: [{ type: "text", text }],
-        structuredContent: output,
-      };
-    } catch (err) {
-      return {
-        content: [{ type: "text", text: toActionableSqlError(err) }],
-        isError: true,
-      };
-    }
-  }
+    return {
+      content: [{ type: "text", text: result.text }],
+      structuredContent: result.output,
+    };
+  },
 );
 
 server.registerTool(
@@ -152,25 +130,35 @@ server.registerTool(
     }
 
     try {
-      const [rows] = await getPool().query(prepared.sql, prepared.params);
-      const { text, output } = formatQueryResult({
-        rows,
-        limit,
-        offset,
-        responseFormat: response_format,
-        piiColumns,
-      });
-      return {
-        content: [{ type: "text", text }],
-        structuredContent: output,
-      };
+      const conn = await getPool().getConnection();
+      try {
+        if (prepared.useDatabase) {
+          await conn.query("USE ??", [prepared.useDatabase]);
+        } else if (configuredDatabase) {
+          await conn.query("USE ??", [configuredDatabase]);
+        }
+        const [rows] = await conn.query(prepared.sql, prepared.params);
+        const { text, output } = formatQueryResult({
+          rows,
+          limit,
+          offset,
+          responseFormat: response_format,
+          piiColumns,
+        });
+        return {
+          content: [{ type: "text", text }],
+          structuredContent: output,
+        };
+      } finally {
+        conn.release();
+      }
     } catch (err) {
       return {
         content: [{ type: "text", text: toActionableSqlError(err) }],
         isError: true,
       };
     }
-  }
+  },
 );
 
 const transport = new StdioServerTransport();
