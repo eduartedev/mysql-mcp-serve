@@ -100,10 +100,6 @@ export function isReadOnlyCommand(sql: string): boolean {
   return READ_ONLY_KEYWORDS.includes(getFirstKeyword(sql));
 }
 
-export function isSelectQuery(sql: string): boolean {
-  return getFirstKeyword(sql) === "SELECT";
-}
-
 export function hasDestructiveKeyword(strippedSql: string): boolean {
   const normalized = normalizeSql(strippedSql);
   const upper = normalized.toUpperCase();

@@ -1,7 +1,6 @@
 import {
   validateQuery,
   isReadOnlyCommand,
-  isSelectQuery,
   hasDestructiveKeyword,
   hasSensitiveShow,
   hasDangerousFunction,
@@ -36,11 +35,6 @@ describe("isReadOnlyCommand", () => {
     "rechaza: %s",
     (sql) => expect(isReadOnlyCommand(sql)).toBe(false),
   );
-});
-
-describe("isSelectQuery", () => {
-  it("acepta SELECT", () => expect(isSelectQuery("SELECT * FROM users")).toBe(true));
-  it("rechaza SHOW", () => expect(isSelectQuery("SHOW TABLES")).toBe(false));
 });
 
 describe("isWriteQuery", () => {
