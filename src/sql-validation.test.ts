@@ -97,6 +97,14 @@ describe("hasMultipleStatements", () => {
   it("permite una sola sentencia", () =>
     expect(hasMultipleStatements("SELECT 1")).toBe(false),
   );
+
+  it("ignora un punto y coma dentro de un texto", () =>
+    expect(hasMultipleStatements("INSERT INTO t (note) VALUES ('a;b')")).toBe(false),
+  );
+
+  it("ignora un punto y coma dentro de un comentario", () =>
+    expect(hasMultipleStatements("SELECT 1 -- ;")).toBe(false),
+  );
 });
 
 describe("hasDestructiveKeyword", () => {
@@ -220,6 +228,7 @@ describe("validateQuery", () => {
       "DELETE FROM users WHERE id = 1",
       "DELETE FROM users WHERE email = 'x@y.com' AND active = 0",
       "WITH cte AS (SELECT id FROM users WHERE active=0) DELETE FROM users WHERE id IN (SELECT id FROM cte)",
+      "INSERT INTO t (note) VALUES ('a;b')",
     ])("permite: %s", (sql) => {
       const result = validateQuery(sql);
       expect(result.allowed).toBe(true);
@@ -264,6 +273,12 @@ describe("validateQuery", () => {
       const result = validateQuery("SELECT 1; DROP TABLE users");
       expect(result.allowed).toBe(false);
       expect(result.error).toContain("múltiples");
+    });
+
+    it("un texto sin cerrar conserva el error del texto", () => {
+      const result = validateQuery("INSERT INTO t (note) VALUES ('a;b");
+      expect(result.allowed).toBe(false);
+      expect(result.error).toContain("sin cerrar");
     });
   });
 

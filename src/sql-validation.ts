@@ -158,7 +158,9 @@ export function requiresWhereClause(strippedSql: string): boolean {
 }
 
 export function hasMultipleStatements(sql: string): boolean {
-  const withoutTrailing = sql.trim().replace(/;\s*$/, "");
+  const strippedResult = stripSqlLiteralsAndComments(sql.trim());
+  if (!strippedResult.ok) return false;
+  const withoutTrailing = strippedResult.stripped.replace(/;\s*$/, "");
   return withoutTrailing.includes(";");
 }
 
