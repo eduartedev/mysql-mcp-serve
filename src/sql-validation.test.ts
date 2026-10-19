@@ -11,6 +11,13 @@ import {
   requiresWhereClause,
   hasMultipleStatements,
 } from "./sql-validation.js";
+import { stripSqlLiteralsAndComments } from "./sql-normalize.js";
+
+function stripped(sql: string): string {
+  const r = stripSqlLiteralsAndComments(sql);
+  if (!r.ok) throw new Error(r.error);
+  return r.stripped;
+}
 
 describe("isReadOnlyCommand", () => {
   it.each([
@@ -47,6 +54,11 @@ describe("isWriteQuery", () => {
   it("no detecta WITH + SELECT", () =>
     expect(isWriteQuery("WITH c AS (SELECT 1) SELECT * FROM c")).toBe(false),
   );
+  it("no marca WITH insert AS SELECT", () => {
+    expect(
+      isWriteQuery(stripped("WITH insert AS (SELECT 1) SELECT * FROM insert")),
+    ).toBe(false);
+  });
 });
 
 describe("hasWhereClause / requiresWhereClause / hasAlwaysTrueWhere", () => {
@@ -59,12 +71,21 @@ describe("hasWhereClause / requiresWhereClause / hasAlwaysTrueWhere", () => {
 
   it.each(["WHERE 1=1", "WHERE TRUE", "WHERE 1", "WHERE 'a'='a'"])(
     "detecta WHERE siempre verdadero: %s",
-    (clause) => expect(hasAlwaysTrueWhere(`DELETE FROM t ${clause}`)).toBe(true),
+    (clause) => {
+      const sql = `DELETE FROM t ${clause}`;
+      expect(hasAlwaysTrueWhere(sql, stripped(sql))).toBe(true);
+    },
   );
 
-  it("no marca WHERE real", () =>
-    expect(hasAlwaysTrueWhere("DELETE FROM t WHERE id = 5")).toBe(false),
-  );
+  it("detecta WHERE 2=2", () => {
+    const sql = "DELETE FROM t WHERE 2=2";
+    expect(hasAlwaysTrueWhere(sql, stripped(sql))).toBe(true);
+  });
+
+  it("no marca WHERE real", () => {
+    const sql = "DELETE FROM t WHERE id = 5";
+    expect(hasAlwaysTrueWhere(sql, stripped(sql))).toBe(false);
+  });
 });
 
 describe("hasMultipleStatements", () => {

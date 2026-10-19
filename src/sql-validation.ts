@@ -1,3 +1,5 @@
+import { stripSqlLiteralsAndComments } from "./sql-normalize.js";
+
 /**
  * Validación de SQL (Nivel B):
  * - Lectura: SELECT, WITH, SHOW, DESCRIBE, DESC, EXPLAIN, ANALYZE, CHECK, CHECKSUM
@@ -72,6 +74,7 @@ const ALWAYS_TRUE_WHERE_PATTERNS: RegExp[] = [
   /\bWHERE\s+1\s*=\s*1\b/i,
   /\bWHERE\s+TRUE\b/i,
   /\bWHERE\s+1\b(?!\s*[=<>!])/i,
+  /\bWHERE\s+\d+\s*=\s*\d+\b/i,
 ];
 
 function normalizeSql(sql: string): string {
@@ -84,6 +87,15 @@ function getFirstKeyword(sql: string): string {
   return match ? match[1].toUpperCase() : "";
 }
 
+export function getMainStatementKeyword(strippedSql: string): string {
+  const first = getFirstKeyword(strippedSql);
+  if (first !== "WITH") return first;
+  const match = strippedSql.match(
+    /\)\s*(SELECT|INSERT|UPDATE|DELETE|SHOW|DESCRIBE|DESC|EXPLAIN|ANALYZE|CHECK|CHECKSUM)\b/i,
+  );
+  return match ? match[1].toUpperCase() : first;
+}
+
 export function isReadOnlyCommand(sql: string): boolean {
   return READ_ONLY_KEYWORDS.includes(getFirstKeyword(sql));
 }
@@ -92,8 +104,8 @@ export function isSelectQuery(sql: string): boolean {
   return getFirstKeyword(sql) === "SELECT";
 }
 
-export function hasDestructiveKeyword(sql: string): boolean {
-  const normalized = normalizeSql(sql);
+export function hasDestructiveKeyword(strippedSql: string): boolean {
+  const normalized = normalizeSql(strippedSql);
   const upper = normalized.toUpperCase();
 
   if (SAFE_EXCEPTIONS.some((re) => re.test(normalized))) {
@@ -107,50 +119,43 @@ export function hasDestructiveKeyword(sql: string): boolean {
   });
 }
 
-export function hasSensitiveShow(sql: string): boolean {
-  const normalized = normalizeSql(sql);
+export function hasSensitiveShow(strippedSql: string): boolean {
+  const normalized = normalizeSql(strippedSql);
   return SENSITIVE_SHOW_PATTERNS.some((re) => re.test(normalized));
 }
 
-export function hasDangerousFunction(sql: string): boolean {
-  const normalized = normalizeSql(sql);
+export function hasDangerousFunction(strippedSql: string): boolean {
+  const normalized = normalizeSql(strippedSql);
   return DANGEROUS_FUNCTION_PATTERNS.some((re) => re.test(normalized));
 }
 
-export function isWriteQuery(sql: string): boolean {
-  const first = getFirstKeyword(sql);
-  if (WRITE_KEYWORDS.includes(first)) return true;
-  // WITH ... INSERT/UPDATE/DELETE
-  if (first === "WITH") {
-    return /\b(INSERT|UPDATE|DELETE)\b/i.test(sql);
-  }
-  return false;
+export function isWriteQuery(strippedSql: string): boolean {
+  return WRITE_KEYWORDS.includes(getMainStatementKeyword(strippedSql));
 }
 
-export function hasWhereClause(sql: string): boolean {
-  return /\bWHERE\b/i.test(normalizeSql(sql));
+export function hasWhereClause(strippedSql: string): boolean {
+  if (!requiresWhereClause(strippedSql)) return true;
+  return /\bWHERE\b/i.test(normalizeSql(strippedSql));
 }
 
-export function hasAlwaysTrueWhere(sql: string): boolean {
-  const normalized = normalizeSql(sql);
+export function hasAlwaysTrueWhere(sql: string, strippedSql: string): boolean {
+  const normalized = normalizeSql(strippedSql);
   if (ALWAYS_TRUE_WHERE_PATTERNS.some((re) => re.test(normalized))) {
     return true;
   }
-  // WHERE 'x'='x' o WHERE "x"="x"
-  if (/\bWHERE\s+(['"])([^'"]*)\1\s*=\s*\1\2\1/i.test(normalized)) {
+  if (/\bWHERE\s+([a-zA-Z_][\w]*)\s*=\s*\1\b/i.test(normalized)) {
+    return true;
+  }
+  if (/\bWHERE\s+(['"])([^'"]*)\1\s*=\s*\1\2\1/i.test(normalizeSql(sql))) {
     return true;
   }
   return false;
 }
 
 /** UPDATE/DELETE (o WITH que los contiene) requieren WHERE. */
-export function requiresWhereClause(sql: string): boolean {
-  const first = getFirstKeyword(sql);
-  if (first === "UPDATE" || first === "DELETE") return true;
-  if (first === "WITH") {
-    return /\b(UPDATE|DELETE)\b/i.test(sql);
-  }
-  return false;
+export function requiresWhereClause(strippedSql: string): boolean {
+  const main = getMainStatementKeyword(strippedSql);
+  return main === "UPDATE" || main === "DELETE";
 }
 
 export function hasMultipleStatements(sql: string): boolean {
@@ -179,7 +184,13 @@ export function validateQuery(sql: string): ValidationResult {
     };
   }
 
-  if (hasDestructiveKeyword(trimmed)) {
+  const strippedResult = stripSqlLiteralsAndComments(trimmed);
+  if (!strippedResult.ok) {
+    return { allowed: false, error: strippedResult.error };
+  }
+  const stripped = strippedResult.stripped;
+
+  if (hasDestructiveKeyword(stripped)) {
     return {
       allowed: false,
       error:
@@ -187,7 +198,7 @@ export function validateQuery(sql: string): ValidationResult {
     };
   }
 
-  const first = getFirstKeyword(trimmed);
+  const first = getFirstKeyword(stripped);
   if (!ALLOWED_FIRST_KEYWORDS.includes(first)) {
     return {
       allowed: false,
@@ -196,7 +207,7 @@ export function validateQuery(sql: string): ValidationResult {
     };
   }
 
-  if (hasSensitiveShow(trimmed)) {
+  if (hasSensitiveShow(stripped)) {
     return {
       allowed: false,
       error:
@@ -204,7 +215,7 @@ export function validateQuery(sql: string): ValidationResult {
     };
   }
 
-  if (hasDangerousFunction(trimmed)) {
+  if (hasDangerousFunction(stripped)) {
     return {
       allowed: false,
       error:
@@ -212,15 +223,15 @@ export function validateQuery(sql: string): ValidationResult {
     };
   }
 
-  if (requiresWhereClause(trimmed)) {
-    if (!hasWhereClause(trimmed)) {
+  if (requiresWhereClause(stripped)) {
+    if (!hasWhereClause(stripped)) {
       return {
         allowed: false,
         error:
           "UPDATE y DELETE requieren una cláusula WHERE para evitar modificar todas las filas.",
       };
     }
-    if (hasAlwaysTrueWhere(trimmed)) {
+    if (hasAlwaysTrueWhere(trimmed, stripped)) {
       return {
         allowed: false,
         error:
