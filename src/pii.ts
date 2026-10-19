@@ -8,6 +8,8 @@ const BUILT_IN_PII_COLUMNS = [
   "ssn",
   "nss",
   "token",
+  "e_mail",
+  "passwd",
 ] as const;
 
 const CUSTOM_TOKEN_PATTERN = /^[A-Za-z0-9_]+$/;
@@ -40,4 +42,16 @@ export function parsePiiColumns(raw: string | undefined): ReadonlySet<string> {
 
 export function isPiiColumn(column: string, names: ReadonlySet<string>): boolean {
   return columnKeys(column).some((key) => names.has(key));
+}
+
+/** Alias en `columna AS alias` cuando la columna es sensible. */
+export function piiAliasNames(strippedSql: string, names: ReadonlySet<string>): string[] {
+  const aliases: string[] = [];
+  const re = /\b(?:[A-Za-z_][\w]*\.)?([A-Za-z_][\w]*)\s+AS\s+([A-Za-z_][\w]*)\b/gi;
+  for (const match of strippedSql.matchAll(re)) {
+    const column = match[1] ?? "";
+    const alias = match[2] ?? "";
+    if (alias !== "" && isPiiColumn(column, names)) aliases.push(alias.toLowerCase());
+  }
+  return aliases;
 }

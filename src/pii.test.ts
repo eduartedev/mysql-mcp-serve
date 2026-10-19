@@ -16,6 +16,8 @@ describe("isPiiColumn con nombres por defecto", () => {
     "nss",
     "token",
     "email_verified",
+    "e_mail",
+    "passwd",
   ])("enmascara %s", (column) => {
     expect(isPiiColumn(column, defaults)).toBe(true);
   });
