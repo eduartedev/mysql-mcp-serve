@@ -1,4 +1,6 @@
 import type { AccessMode } from "./access-mode.js";
+import { assertSqlSchemasAllowed } from "./sql-schema-refs.js";
+import { stripSqlLiteralsAndComments } from "./sql-normalize.js";
 import { isWriteQuery } from "./sql-validation.js";
 
 export type SchemaPolicy = "inherit" | "ro" | "rw";
@@ -102,7 +104,18 @@ export function authorizeDatabase(input: AuthorizeInput): AuthorizeResult {
   const resolved = resolvePolicy(effective, requested, configured, allowlist);
   if ("error" in resolved) return { ok: false, error: resolved.error };
 
-  if (isWriteQuery(sql)) {
+  const strippedResult = stripSqlLiteralsAndComments(sql);
+  if (!strippedResult.ok) {
+    return { ok: false, error: strippedResult.error };
+  }
+  const schemaCheck = assertSqlSchemasAllowed(
+    strippedResult.stripped,
+    allowlist,
+    effective,
+  );
+  if (!schemaCheck.ok) return { ok: false, error: schemaCheck.error };
+
+  if (isWriteQuery(strippedResult.stripped)) {
     if (mode === "readonly") return { ok: false, error: ERR_PROCESS_READONLY };
     if (resolved.policy === "ro") return { ok: false, error: ERR_SCHEMA_READONLY };
   }
