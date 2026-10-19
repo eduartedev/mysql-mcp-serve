@@ -1,0 +1,38 @@
+name: Publish npm
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - run: npm ci
+      - run: npm test
+
+      - name: Verificar tag vs package.json
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          VERSION=$(node -e "console.log(JSON.parse(require('fs').readFileSync('package.json','utf8')).version)")
+          EXPECTED="v${VERSION}"
+          if [ "$TAG" != "$EXPECTED" ]; then
+            echo "El tag del release ($TAG) debe coincidir con v$VERSION en package.json"
+            exit 1
+          fi
+
+      - run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
