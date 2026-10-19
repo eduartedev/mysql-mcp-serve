@@ -142,7 +142,7 @@ La primera vez, `npx` descarga el paquete del registry; no hace falta tener el r
   - `query`: texto de la consulta.
   - `database`: (opcional) nombre de la base a usar; si no se indica, se usa `MYSQL_DATABASE`.
   - `limit`: (opcional) filas por página, por defecto 20, máximo 100.
-  - `offset`: (opcional) filas a saltar antes de la página, por defecto 0.
+  - `offset`: (opcional) filas a saltar antes de la página, por defecto 0, máximo 100000.
   - `response_format`: (opcional) `markdown` (por defecto) o `json`.
 - **mysql_catalog**: lee la definición de vistas, triggers, funciones y procedimientos desde `information_schema`.
   - `kind`: `view`, `trigger`, `function` o `procedure`.
@@ -150,13 +150,13 @@ La primera vez, `npx` descarga el paquete del registry; no hace falta tener el r
   - `database`: (opcional) base a consultar; debe estar permitida por `MYSQL_ALLOWED_DATABASES`. Si no se indica, se usa `MYSQL_DATABASE`.
   - `limit`, `offset` y `response_format`: igual que en `mysql_query`.
 
-`limit` y `offset` paginan las filas que ya devolvió MySQL; no reescriben el SQL.
+Un `SELECT` sin `LIMIT` propio se ejecuta con `LIMIT offset, count`. Si la consulta ya trae `LIMIT`, termina en un comentario de línea, o usa `FOR UPDATE` / `LOCK IN SHARE MODE`, MySQL devuelve como mucho `offset + limit + 1` filas y la página se corta aquí. El resto de comandos se pagina en memoria.
 
 Campos estructurados de la respuesta (`structuredContent`):
 
 | Campo | Descripción |
 |-------|-------------|
-| `totalCount` | Filas devueltas por MySQL antes de paginar |
+| `totalCount` | En un `SELECT` con el `LIMIT` añadido aquí, el offset más las filas que devolvió MySQL (incluye una de más si hay otra página). En el resto, las filas devueltas antes de cortar la página |
 | `count` | Filas de esta página |
 | `offset` | Offset aplicado |
 | `limit` | Límite aplicado |
@@ -184,7 +184,7 @@ Ejemplos de `SHOW` permitidos: `SHOW TABLES`, `SHOW DATABASES`, `SHOW COLUMNS`, 
 - `mysql_catalog` solo lee `information_schema`. No ejecuta `CALL` ni `CREATE`. El nombre del objeto no se concatena en el SQL.
 - Las columnas `email`, `correo`, `phone`, `telefono`, `password`, `contrasena`, `ssn`, `nss` y `token`, más las de `MYSQL_PII_COLUMNS`, se devuelven como `***`. Eso aplica al texto y a `structuredContent`. Una columna como `notes` no se inspecciona, aunque el texto parezca un correo.
 - Con las escrituras activadas, `UPDATE` y `DELETE` **deben** incluir una cláusula `WHERE`.
-- Se rechazan `WHERE` siempre verdaderos (`WHERE 1=1`, `WHERE (1=1)`, `WHERE TRUE`, `WHERE 1`, `WHERE 'a'='a'`, `OR 1=1`).
+- Se rechazan `WHERE` siempre verdaderos (`WHERE 1=1`, `WHERE (1=1)`, `WHERE TRUE`, `WHERE 1`, `WHERE 'a'='a'`, `OR 1=1`). Antes de `UPDATE` o `DELETE`, la conexión activa `sql_safe_updates`.
 - No se permiten múltiples sentencias en una sola consulta.
 - Se bloquean comandos destructivos: `DROP`, `TRUNCATE`, `ALTER`, `CREATE`, `REPLACE`, `RENAME`, `GRANT`, `REVOKE`, `LOAD DATA`, `FLUSH`, `RESET`, `PREPARE`, etc.
 - Se bloquean variantes sensibles de `SHOW`: `SHOW GRANTS`, `SHOW VARIABLES`, `SHOW PROCESSLIST`, `SHOW MASTER/SLAVE/REPLICA STATUS`, `SHOW BINARY LOGS`, etc.

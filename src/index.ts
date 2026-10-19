@@ -10,6 +10,7 @@ import { toActionableSqlError } from "./sql-error.js";
 import { resolveAccessMode, toolAnnotations } from "./access-mode.js";
 import { parseAllowlist } from "./schema-permissions.js";
 import { parsePiiColumns } from "./pii.js";
+import { QUERY_TIMEOUT_MS } from "./constants.js";
 import { loadMysqlEnvFile } from "./load-env.js";
 
 loadMysqlEnvFile();
@@ -40,7 +41,7 @@ server.registerTool(
     title: "Ejecutar consulta SQL",
     description:
       "Ejecuta SQL de lectura (SELECT, WITH, SHOW, DESCRIBE, EXPLAIN, ANALYZE, CHECK, CHECKSUM) y escritura controlada (INSERT; UPDATE/DELETE solo con WHERE). Bloquea DDL destructivo, SHOW sensibles y funciones peligrosas.\n\n" +
-      "Argumentos: query (una sola sentencia), database (opcional, USE previo), limit (filas por página, 1-100, por defecto 20), offset (filas a saltar, por defecto 0) y response_format ('markdown' o 'json'). En SELECT/WITH, limit y offset se aplican en el servidor (subconsulta acotada); el resto pagina en memoria.\n\n" +
+      "Argumentos: query (una sola sentencia), database (opcional, USE previo), limit (filas por página, 1-100, por defecto 20), offset (filas a saltar, 0-100000, por defecto 0) y response_format ('markdown' o 'json'). Un SELECT sin LIMIT propio se ejecuta con LIMIT offset, count. Si ya trae LIMIT, acaba en un comentario de línea, o usa FOR UPDATE / LOCK IN SHARE MODE, MySQL devuelve como mucho offset+limit+1 filas.\n\n" +
       "Devuelve: totalCount, count, offset, limit, hasMore, nextOffset, truncated y rows. Si hasMore es true, repite la llamada con offset = nextOffset. Las respuestas de más de 25000 caracteres se truncan (truncated = true).\n\n" +
       "Ejemplo: { \"query\": \"SELECT id, name FROM customers ORDER BY id\", \"limit\": 20, \"offset\": 20 }.\n\n" +
       "Si la validación rechaza la consulta, el error nombra la regla incumplida.\n\n" +
@@ -136,11 +137,15 @@ server.registerTool(
       const conn = await getPool().getConnection();
       try {
         if (prepared.useDatabase) {
-          await conn.query("USE ??", [prepared.useDatabase]);
+          await conn.query({ sql: "USE ??", values: [prepared.useDatabase], timeout: QUERY_TIMEOUT_MS });
         } else if (configuredDatabase) {
-          await conn.query("USE ??", [configuredDatabase]);
+          await conn.query({ sql: "USE ??", values: [configuredDatabase], timeout: QUERY_TIMEOUT_MS });
         }
-        const [rows] = await conn.query(prepared.sql, prepared.params);
+        const [rows] = await conn.query({
+          sql: prepared.sql,
+          values: prepared.params,
+          timeout: QUERY_TIMEOUT_MS,
+        });
         const { text, output } = formatQueryResult({
           rows,
           limit,

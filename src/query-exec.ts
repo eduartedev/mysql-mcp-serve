@@ -4,38 +4,92 @@ import type { Pool } from "./db.js";
 import { formatQueryResult, type ResponseFormat } from "./format-result.js";
 import { authorizeDatabase, type Allowlist } from "./schema-permissions.js";
 import { stripSqlLiteralsAndComments } from "./sql-normalize.js";
-import { getMainStatementKeyword } from "./sql-validation.js";
+import { QUERY_TIMEOUT_MS } from "./constants.js";
+import { getMainStatementKeyword, isWriteQuery } from "./sql-validation.js";
 import { toActionableSqlError } from "./sql-error.js";
+
+function timed(sql: string, values?: unknown[]): { sql: string; timeout: number; values?: unknown[] } {
+  return values === undefined
+    ? { sql, timeout: QUERY_TIMEOUT_MS }
+    : { sql, values, timeout: QUERY_TIMEOUT_MS };
+}
 
 export type QueryExecInput = {
   pool: Pool;
   query: string;
   useDatabase?: string;
   homeDatabase?: string;
+  safeUpdates?: boolean;
+  maxRows?: number;
 };
 
+type QueryArg = string | { sql: string; timeout?: number; values?: unknown[] };
+
+type SessionConn = {
+  query: (sql: QueryArg, params?: unknown[]) => Promise<[unknown, unknown]>;
+  release: () => void;
+  destroy?: () => void;
+};
+
+function planSelect(
+  sql: string,
+  offset: number,
+  limit: number,
+): { sql: string; paged: boolean } {
+  const body = sql.trim().replace(/;\s*$/, "");
+  if (!Number.isInteger(offset) || !Number.isInteger(limit) || offset < 0 || limit < 1) {
+    return { sql: body, paged: false };
+  }
+  const stripped = stripSqlLiteralsAndComments(body);
+  if (!stripped.ok) return { sql: body, paged: false };
+  const keepSessionCap =
+    /\bLIMIT\b/i.test(stripped.stripped) ||
+    /\bFOR\s+UPDATE\b/i.test(stripped.stripped) ||
+    /\bLOCK\s+IN\s+SHARE\s+MODE\b/i.test(stripped.stripped) ||
+    stripped.endsInLineComment;
+  if (keepSessionCap) return { sql: body, paged: false };
+  return { sql: `${body} LIMIT ${offset}, ${limit + 1}`, paged: true };
+}
+
 export async function executeOnSession(input: QueryExecInput): Promise<unknown> {
-  const conn = await input.pool.getConnection();
+  const conn = (await input.pool.getConnection()) as SessionConn;
+  let capped = false;
   try {
     if (input.useDatabase) {
-      await conn.query("USE ??", [input.useDatabase]);
+      await conn.query(timed("USE ??", [input.useDatabase]));
     } else if (input.homeDatabase) {
-      await conn.query("USE ??", [input.homeDatabase]);
+      await conn.query(timed("USE ??", [input.homeDatabase]));
     }
-    const [rows] = await conn.query(input.query);
+    if (input.safeUpdates) {
+      await conn.query(timed("SET SESSION sql_safe_updates = 1"));
+    }
+    if (input.maxRows !== undefined) {
+      if (!Number.isSafeInteger(input.maxRows) || input.maxRows < 1) {
+        throw new Error("maxRows no es válido.");
+      }
+      await conn.query(timed(`SET SESSION sql_select_limit = ${input.maxRows}`));
+      capped = true;
+    }
+    const [rows] = await conn.query(timed(input.query));
     return rows;
   } finally {
-    conn.release();
+    let dropped = false;
+    if (capped) {
+      try {
+        await conn.query(timed("SET SESSION sql_select_limit = DEFAULT"));
+      } catch {
+        if (typeof conn.destroy === "function") {
+          conn.destroy();
+          dropped = true;
+        }
+      }
+    }
+    if (!dropped) conn.release();
   }
 }
 
 function needsServerRowCap(strippedSql: string): boolean {
   return getMainStatementKeyword(strippedSql) === "SELECT";
-}
-
-function wrapWithRowCap(sql: string, maxRows: number): string {
-  const trimmed = sql.trim().replace(/;\s*$/, "");
-  return `SELECT * FROM (${trimmed}) AS __mcp_cap LIMIT ${maxRows}`;
 }
 
 export type MysqlQueryHandlerInput = {
@@ -75,16 +129,21 @@ export async function handleMysqlQuery(
 
   try {
     const stripped = stripSqlLiteralsAndComments(input.query.trim());
-    let execSql = input.query;
-    if (stripped.ok && needsServerRowCap(stripped.stripped)) {
-      execSql = wrapWithRowCap(input.query, input.offset + input.limit + 1);
+    if (!stripped.ok) return { ok: false, text: stripped.error };
+    const select = needsServerRowCap(stripped.stripped);
+    const plan = select ? planSelect(input.query, input.offset, input.limit) : { sql: input.query, paged: false };
+    const maxRows = input.offset + input.limit + 1;
+    if (select && !plan.paged && !Number.isSafeInteger(maxRows)) {
+      return { ok: false, text: "offset es demasiado grande." };
     }
 
     const rows = await executeOnSession({
       pool: input.pool,
-      query: execSql,
+      query: plan.sql,
       useDatabase: authorization.useDatabase,
       homeDatabase: input.configuredDatabase,
+      safeUpdates: isWriteQuery(stripped.stripped),
+      maxRows: select && !plan.paged ? maxRows : undefined,
     });
 
     const { text, output } = formatQueryResult({
@@ -93,6 +152,8 @@ export async function handleMysqlQuery(
       offset: input.offset,
       responseFormat: input.response_format,
       piiColumns: input.piiColumns,
+      paged: plan.paged,
+      sql: stripped.stripped,
     });
     return { ok: true, text, output };
   } catch (err) {

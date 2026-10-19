@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { AccessMode } from "./access-mode.js";
-import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "./constants.js";
+import { DEFAULT_PAGE_LIMIT, MAX_OFFSET, MAX_PAGE_LIMIT } from "./constants.js";
 import { authorizeDatabase, type Allowlist } from "./schema-permissions.js";
 
 export type CatalogKind = "view" | "trigger" | "function" | "procedure";
@@ -37,8 +37,9 @@ export const CatalogSchema = z
       .number()
       .int()
       .min(0)
+      .max(MAX_OFFSET)
       .default(0)
-      .describe("Filas a saltar antes de esta página. Por defecto 0."),
+      .describe("Filas a saltar antes de esta página. Entre 0 y 100000. Por defecto 0."),
     response_format: z
       .enum(["markdown", "json"])
       .default("markdown")

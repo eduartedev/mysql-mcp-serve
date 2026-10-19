@@ -189,4 +189,8 @@ describe("QuerySchema", () => {
   it("rechaza offset negativo", () => {
     expect(QuerySchema.safeParse({ query: "SELECT 1", offset: -1 }).success).toBe(false);
   });
+
+  it("rechaza offset por encima de 100000", () => {
+    expect(QuerySchema.safeParse({ query: "SELECT 1", offset: 100_001 }).success).toBe(false);
+  });
 });

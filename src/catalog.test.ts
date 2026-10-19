@@ -142,4 +142,8 @@ describe("CatalogSchema", () => {
     expect(parsed.data.offset).toBe(0);
     expect(parsed.data.response_format).toBe("markdown");
   });
+
+  it("rechaza offset por encima de 100000", () => {
+    expect(CatalogSchema.safeParse({ kind: "view", offset: 100_001 }).success).toBe(false);
+  });
 });

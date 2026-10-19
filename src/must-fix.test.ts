@@ -1,28 +1,16 @@
-import { executeOnSession, handleMysqlQuery } from "./query-exec.js";
+import { handleMysqlQuery } from "./query-exec.js";
 import { parseAllowlist, authorizeDatabase } from "./schema-permissions.js";
 import { parsePiiColumns } from "./pii.js";
 import { validateQuery } from "./sql-validation.js";
 import { stripSqlLiteralsAndComments } from "./sql-normalize.js";
 
-describe("must-fix audit", () => {
-  it("1 USE y query en la misma conexión", async () => {
-    const calls: string[] = [];
-    const conn = {
-      query: async (sql: string, params?: unknown[]) => {
-        if (sql === "USE ??") calls.push(`USE:${params?.[0]}`);
-        else calls.push(sql);
-        return [[]];
-      },
-      release: () => undefined,
-    };
-    await executeOnSession({
-      pool: { getConnection: async () => conn } as never,
-      query: "SELECT 1",
-      useDatabase: "db",
-    });
-    expect(calls).toEqual(["USE:db", "SELECT 1"]);
-  });
+type QueryArg = string | { sql: string; values?: unknown[] };
 
+function sqlOf(arg: QueryArg): { sql: string; values?: unknown[] } {
+  return typeof arg === "string" ? { sql: arg } : arg;
+}
+
+describe("must-fix audit", () => {
   it("2 bloquea comentario ejecutable y INTO OUTFILE pegado", () => {
     expect(validateQuery("SELECT/*!50000 LOAD_FILE('C:/Windows/win.ini') */").allowed).toBe(false);
     expect(validateQuery("SELECT * FROM t) INTO/**/OUTFILE 'C:/tmp/x.csv' --").allowed).toBe(false);
@@ -43,11 +31,11 @@ describe("must-fix audit", () => {
     expect(r.ok).toBe(false);
   });
 
-  it("5 SELECT lleva LIMIT en el SQL", async () => {
-    let sql = "";
+  it("5 un SELECT sin LIMIT propio lleva el límite en el SQL", async () => {
+    const calls: string[] = [];
     const conn = {
-      query: async (q: string) => {
-        sql = q;
+      query: async (arg: QueryArg) => {
+        calls.push(sqlOf(arg).sql);
         return [[{ n: 1 }]];
       },
       release: () => undefined,
@@ -62,7 +50,33 @@ describe("must-fix audit", () => {
       allowlist: parseAllowlist(undefined),
       piiColumns: parsePiiColumns(undefined),
     });
-    expect(sql).toMatch(/LIMIT 6/i);
+    expect(calls).toEqual(["SELECT n FROM t LIMIT 0, 6"]);
+  });
+
+  it("un SELECT que acaba en comentario usa el tope de sesión", async () => {
+    const calls: string[] = [];
+    const conn = {
+      query: async (arg: QueryArg) => {
+        calls.push(sqlOf(arg).sql);
+        return [[{ n: 1 }]];
+      },
+      release: () => undefined,
+    };
+    await handleMysqlQuery({
+      pool: { getConnection: async () => conn } as never,
+      query: "SELECT n FROM t -- nota",
+      limit: 5,
+      offset: 0,
+      response_format: "json",
+      accessMode: "readonly",
+      allowlist: parseAllowlist(undefined),
+      piiColumns: parsePiiColumns(undefined),
+    });
+    expect(calls).toEqual([
+      "SET SESSION sql_select_limit = 6",
+      "SELECT n FROM t -- nota",
+      "SET SESSION sql_select_limit = DEFAULT",
+    ]);
   });
 
   it("strip separa un comentario con un espacio", () => {

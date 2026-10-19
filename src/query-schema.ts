@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "./constants.js";
+import { DEFAULT_PAGE_LIMIT, MAX_OFFSET, MAX_PAGE_LIMIT } from "./constants.js";
 
 export const QuerySchema = z
   .object({
@@ -25,8 +25,9 @@ export const QuerySchema = z
       .number()
       .int()
       .min(0)
+      .max(MAX_OFFSET)
       .default(0)
-      .describe("Filas a saltar antes de esta página. Por defecto 0."),
+      .describe("Filas a saltar antes de esta página. Entre 0 y 100000. Por defecto 0."),
     response_format: z
       .enum(["markdown", "json"])
       .default("markdown")
