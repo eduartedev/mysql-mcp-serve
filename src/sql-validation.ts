@@ -74,7 +74,10 @@ const ALWAYS_TRUE_WHERE_PATTERNS: RegExp[] = [
   /\bWHERE\s+1\s*=\s*1\b/i,
   /\bWHERE\s+TRUE\b/i,
   /\bWHERE\s+1\b(?!\s*[=<>!])/i,
-  /\bWHERE\s+\d+\s*=\s*\d+\b/i,
+  /\bWHERE\s+\(?\s*\d+\s*=\s*\d+\b/i,
+  /\bOR\s+\(?\s*(\d+)\s*=\s*\1\b/i,
+  /\bOR\s+TRUE\b/i,
+  /\bOR\s+([A-Za-z_][\w]*)\s*=\s*\1\b/i,
 ];
 
 function normalizeSql(sql: string): string {

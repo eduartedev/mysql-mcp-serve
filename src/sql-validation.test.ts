@@ -76,6 +76,11 @@ describe("hasWhereClause / requiresWhereClause / hasAlwaysTrueWhere", () => {
     expect(hasAlwaysTrueWhere(sql, stripped(sql))).toBe(true);
   });
 
+  it("detecta WHERE (1=1)", () => {
+    const sql = "DELETE FROM t WHERE (1=1)";
+    expect(hasAlwaysTrueWhere(sql, stripped(sql))).toBe(true);
+  });
+
   it("no marca WHERE real", () => {
     const sql = "DELETE FROM t WHERE id = 5";
     expect(hasAlwaysTrueWhere(sql, stripped(sql))).toBe(false);
@@ -230,6 +235,9 @@ describe("validateQuery", () => {
       "DELETE FROM users WHERE TRUE",
       "DELETE FROM users WHERE 1",
       "UPDATE users SET x = 1 WHERE 'a'='a'",
+      "DELETE FROM users WHERE (1=1)",
+      "DELETE FROM users WHERE id = 1 OR 1=1",
+      "DELETE FROM users WHERE id = 1 OR id = id",
       "SELECT * FROM t) INTO/**/OUTFILE 'C:/tmp/x.csv' --",
       "SELECT/*!50000 LOAD_FILE('C:/Windows/win.ini') */",
     ])("bloquea: %s", (sql) => {

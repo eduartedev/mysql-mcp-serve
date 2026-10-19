@@ -184,7 +184,7 @@ Ejemplos de `SHOW` permitidos: `SHOW TABLES`, `SHOW DATABASES`, `SHOW COLUMNS`, 
 - `mysql_catalog` solo lee `information_schema`. No ejecuta `CALL` ni `CREATE`. El nombre del objeto no se concatena en el SQL.
 - Las columnas `email`, `correo`, `phone`, `telefono`, `password`, `contrasena`, `ssn`, `nss` y `token`, más las de `MYSQL_PII_COLUMNS`, se devuelven como `***`. Eso aplica al texto y a `structuredContent`. Una columna como `notes` no se inspecciona, aunque el texto parezca un correo.
 - Con las escrituras activadas, `UPDATE` y `DELETE` **deben** incluir una cláusula `WHERE`.
-- Se rechazan `WHERE` siempre verdaderos (`WHERE 1=1`, `WHERE TRUE`, `WHERE 1`, `WHERE 'a'='a'`).
+- Se rechazan `WHERE` siempre verdaderos (`WHERE 1=1`, `WHERE (1=1)`, `WHERE TRUE`, `WHERE 1`, `WHERE 'a'='a'`, `OR 1=1`).
 - No se permiten múltiples sentencias en una sola consulta.
 - Se bloquean comandos destructivos: `DROP`, `TRUNCATE`, `ALTER`, `CREATE`, `REPLACE`, `RENAME`, `GRANT`, `REVOKE`, `LOAD DATA`, `FLUSH`, `RESET`, `PREPARE`, etc.
 - Se bloquean variantes sensibles de `SHOW`: `SHOW GRANTS`, `SHOW VARIABLES`, `SHOW PROCESSLIST`, `SHOW MASTER/SLAVE/REPLICA STATUS`, `SHOW BINARY LOGS`, etc.
