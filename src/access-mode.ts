@@ -1,3 +1,4 @@
+import { stripSqlLiteralsAndComments } from "./sql-normalize.js";
 import { isWriteQuery, validateQuery, type ValidationResult } from "./sql-validation.js";
 
 export type AccessMode = "readonly" | "readwrite";
@@ -11,7 +12,11 @@ export function gateQuery(sql: string, mode: AccessMode): ValidationResult {
   const validation = validateQuery(sql);
   if (!validation.allowed) return validation;
 
-  if (mode === "readonly" && isWriteQuery(sql)) {
+  const stripped = stripSqlLiteralsAndComments(sql.trim());
+  if (!stripped.ok) {
+    return { allowed: false, error: stripped.error };
+  }
+  if (mode === "readonly" && isWriteQuery(stripped.stripped)) {
     return {
       allowed: false,
       error:
