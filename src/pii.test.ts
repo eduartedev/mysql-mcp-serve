@@ -78,6 +78,28 @@ describe("formatQueryResult con enmascaramiento", () => {
     expect(text.split("ana@tienda.example")).toHaveLength(2);
   });
 
+  it("enmascara el alias de una columna sensible", () => {
+    const { output } = formatQueryResult({
+      rows: [{ e: "ana@tienda.example" }],
+      limit: 20,
+      offset: 0,
+      responseFormat: "json",
+      sql: "SELECT email AS e FROM users",
+    });
+    expect(output.rows[0]?.e).toBe("***");
+  });
+
+  it("no enmascara el alias de la tabla", () => {
+    const { output } = formatQueryResult({
+      rows: [{ name: "ana" }],
+      limit: 20,
+      offset: 0,
+      responseFormat: "json",
+      sql: "SELECT name FROM users AS u",
+    });
+    expect(output.rows[0]?.name).toBe("ana");
+  });
+
   it("enmascara en el JSON de texto", () => {
     const { text } = formatQueryResult({
       rows: [row],

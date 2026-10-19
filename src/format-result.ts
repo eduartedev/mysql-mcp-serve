@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { CHARACTER_LIMIT } from "./constants.js";
-import { isPiiColumn, parsePiiColumns } from "./pii.js";
+import { isPiiColumn, parsePiiColumns, piiAliasNames } from "./pii.js";
 
 export const QueryOutputSchema = z
   .object({
@@ -25,6 +25,9 @@ export interface FormatQueryInput {
   offset: number;
   responseFormat: ResponseFormat;
   piiColumns?: ReadonlySet<string>;
+  /** El SQL ya aplicó OFFSET. Las filas empiezan en la página pedida. */
+  paged?: boolean;
+  sql?: string;
 }
 
 export interface FormattedQueryResult {
@@ -104,15 +107,18 @@ function buildMarkdown(output: QueryOutput, firstRowIsPlain: boolean): string {
 }
 
 export function formatQueryResult(input: FormatQueryInput): FormattedQueryResult {
-  const { rows, limit, offset, responseFormat } = input;
-  const piiNames = input.piiColumns ?? parsePiiColumns(undefined);
+  const { rows, limit, offset, responseFormat, paged = false } = input;
+  const piiNames = new Set(input.piiColumns ?? parsePiiColumns(undefined));
+  if (input.sql) {
+    for (const alias of piiAliasNames(input.sql, piiNames)) piiNames.add(alias);
+  }
   const all: unknown[] = Array.isArray(rows) ? rows : [rows];
-  const totalCount = all.length;
-    const rawPage = all.slice(offset, offset + limit);
-  const firstRowIsPlain = rawPage.length > 0 && isPlainObject(rawPage[0]);
+  const rawPage = paged ? all.slice(0, limit) : all.slice(offset, offset + limit);
   const page = rawPage.map((row) => maskRow(toPlainRow(row), piiNames));
+  const firstRowIsPlain = page.length > 0 && isPlainObject(page[0]);
   const count = page.length;
-  const hasMore = offset + count < totalCount;
+  const totalCount = paged ? offset + all.length : all.length;
+  const hasMore = paged ? all.length > limit : offset + count < totalCount;
 
   const base: QueryOutput = {
     totalCount,
@@ -137,7 +143,7 @@ export function formatQueryResult(input: FormatQueryInput): FormattedQueryResult
   }
 
   const output: QueryOutput = JSON.parse(
-    JSON.stringify({ ...base, truncated }, bigintReplacer),
+    JSON.stringify({ ...base, truncated, rows: truncated ? [] : base.rows }, bigintReplacer),
   ) as QueryOutput;
 
   return { text, output };

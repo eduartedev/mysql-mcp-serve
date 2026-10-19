@@ -83,6 +83,7 @@ describe("formatQueryResult", () => {
       responseFormat: "markdown",
     });
     expect(output.truncated).toBe(true);
+    expect(output.rows).toEqual([]);
     expect(text).toContain("Respuesta truncada");
   });
 
@@ -131,6 +132,37 @@ describe("formatQueryResult", () => {
     });
     expect(output.rows).toEqual([{ affectedRows: 2 }]);
     expect(QueryOutputSchema.safeParse(output).success).toBe(true);
+  });
+
+  it("muestra affectedRows e insertId de una instancia en markdown", () => {
+    class Header {
+      affectedRows = 1;
+      insertId = 7;
+    }
+    const { text } = formatQueryResult({
+      rows: new Header(),
+      limit: 20,
+      offset: 0,
+      responseFormat: "markdown",
+    });
+    expect(text).toContain("affectedRows");
+    expect(text).toContain("insertId");
+    expect(text).toContain("| 1 | 7 |");
+  });
+
+  it("con paged no vuelve a saltar el offset", () => {
+    const { output } = formatQueryResult({
+      rows: [{ id: 1 }, { id: 2 }, { id: 3 }],
+      limit: 2,
+      offset: 10,
+      responseFormat: "json",
+      paged: true,
+    });
+    expect(output.rows).toEqual([{ id: 1 }, { id: 2 }]);
+    expect(output.offset).toBe(10);
+    expect(output.hasMore).toBe(true);
+    expect(output.nextOffset).toBe(12);
+    expect(output.totalCount).toBe(13);
   });
 });
 
