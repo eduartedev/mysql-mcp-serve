@@ -1,58 +1,60 @@
 # mysql-mcp-server
 
-Servidor MCP para consultar y modificar de forma controlada una base de datos MySQL local. Pensado para usarse desde Cursor u otro cliente MCP.
+MCP server for querying and controlled modification of a local MySQL database. Designed for use from Cursor or another MCP client.
 
-## Requisitos
+**Languages:** [English](README.md) · [Español](README.es.md)
+
+## Requirements
 
 - Node.js >= 18
-- MySQL accesible (por ejemplo Laragon, XAMPP, o MySQL instalado)
+- Accessible MySQL (e.g. Laragon, XAMPP, or a standalone MySQL install)
 
-## Instalación
+## Installation
 
 ```bash
 npm install
 ```
 
-## Configuración
+## Configuration
 
-Conexión mediante variables de entorno. Al arrancar se lee un `.env` en el directorio de trabajo (no se sube a Git). Solo entran claves `MYSQL_*` que el proceso aún no trae.
+Connection is configured via environment variables. On startup, a `.env` file in the working directory is loaded (not committed to Git). Only `MYSQL_*` keys that are not already set in the process environment are applied.
 
-| Variable         | Por defecto | Descripción              |
-|------------------|-------------|--------------------------|
-| `MYSQL_HOST`     | localhost   | Host del servidor MySQL  |
-| `MYSQL_PORT`     | 3306        | Puerto                   |
-| `MYSQL_USER`     | root        | Usuario                  |
-| `MYSQL_PASSWORD` | (vacío)     | Contraseña               |
-| `MYSQL_DATABASE` | (opcional)  | Base de datos por defecto|
-| `MYSQL_ACCESS_MODE` | readonly | Solo el valor exacto `readwrite` habilita `INSERT`, `UPDATE` y `DELETE`. Cualquier otro valor, o la variable ausente, es solo lectura |
-| `MYSQL_ALLOWED_DATABASES` | (vacío) | Vacío o ausente: la herramienta puede usar `MYSQL_DATABASE` pero no cambiar a otra base. Lista separada por comas de `nombre`, `nombre:ro` o `nombre:rw` |
-| `MYSQL_PII_COLUMNS` | (vacío) | Nombres extra de columna, separados por comas. `email`, `correo`, `phone`, `telefono`, `password`, `contrasena`, `ssn`, `nss` y `token` ya se enmascaran. Un token con espacios o signos se ignora; el resto sigue aplicando. |
-| `MYSQL_SSL` | (vacío) | Solo el valor exacto `required` activa TLS. Cualquier otro valor no vacío es un error. Vacío o ausente: sin TLS |
-| `MYSQL_SSL_CA` | (opcional) | Ruta a un archivo PEM con la CA. Con `MYSQL_SSL=required`, el archivo debe existir y poder leerse |
-| `MYSQL_SSL_CERT` | (opcional) | Ruta al certificado de cliente (mTLS). Exige definir también `MYSQL_SSL_KEY` |
-| `MYSQL_SSL_KEY` | (opcional) | Ruta a la clave privada de cliente (mTLS). Exige definir también `MYSQL_SSL_CERT` |
-| `MYSQL_SSL_REJECT_UNAUTHORIZED` | true | Solo el valor exacto `false` desactiva la verificación del certificado del servidor. Cualquier otro valor la mantiene activa |
+| Variable         | Default | Description |
+|------------------|---------|-------------|
+| `MYSQL_HOST`     | localhost | MySQL server host |
+| `MYSQL_PORT`     | 3306 | Port |
+| `MYSQL_USER`     | root | Username |
+| `MYSQL_PASSWORD` | (empty) | Password |
+| `MYSQL_DATABASE` | (optional) | Default database |
+| `MYSQL_ACCESS_MODE` | readonly | Only the exact value `readwrite` enables `INSERT`, `UPDATE`, and `DELETE`. Any other value, or an unset variable, is read-only |
+| `MYSQL_ALLOWED_DATABASES` | (empty) | Empty or unset: the tool may use `MYSQL_DATABASE` but cannot switch to another database. Comma-separated list of `name`, `name:ro`, or `name:rw` |
+| `MYSQL_PII_COLUMNS` | (empty) | Extra column names, comma-separated. `email`, `correo`, `phone`, `telefono`, `password`, `contrasena`, `ssn`, `nss`, and `token` are already masked. A token with spaces or punctuation is ignored; the rest still apply. |
+| `MYSQL_SSL` | (empty) | Only the exact value `required` enables TLS. Any other non-empty value is an error. Empty or unset: no TLS |
+| `MYSQL_SSL_CA` | (optional) | Path to a PEM file with the CA. With `MYSQL_SSL=required`, the file must exist and be readable |
+| `MYSQL_SSL_CERT` | (optional) | Client certificate path (mTLS). Requires `MYSQL_SSL_KEY` as well |
+| `MYSQL_SSL_KEY` | (optional) | Client private key path (mTLS). Requires `MYSQL_SSL_CERT` as well |
+| `MYSQL_SSL_REJECT_UNAUTHORIZED` | true | Only the exact value `false` disables server certificate verification. Any other value keeps it enabled |
 
-Las variables `MYSQL_SSL*` solo aceptan rutas a archivos PEM en disco, nunca el contenido del certificado. Se leen una sola vez, al crear el pool de conexiones (en la primera consulta tras arrancar el servidor); cambiarlas exige reiniciar el MCP. `rejectUnauthorized` es `true` por defecto cuando TLS está activo. MariaDB usa el mismo cliente mysql2, por lo que la configuración es idéntica.
+`MYSQL_SSL*` variables accept file paths to PEM files on disk only, never inline certificate content. They are read once when the connection pool is created (on the first query after the server starts); changing them requires restarting the MCP. `rejectUnauthorized` defaults to `true` when TLS is enabled. MariaDB uses the same mysql2 client, so configuration is identical.
 
-Ejemplo `.env`:
+Example `.env`:
 
 ```
 MYSQL_HOST=localhost
 MYSQL_PORT=3306
 MYSQL_USER=root
-MYSQL_PASSWORD=tu_password
-MYSQL_DATABASE=mi_base
+MYSQL_PASSWORD=your_password
+MYSQL_DATABASE=my_database
 MYSQL_ACCESS_MODE=readonly
 MYSQL_ALLOWED_DATABASES=
 MYSQL_PII_COLUMNS=
 ```
 
-## Uso en Cursor
+## Using in Cursor
 
-### Sin clonar el repositorio (npm + npx)
+### Without cloning the repository (npm + npx)
 
-Con Node.js >= 18 instalado, en **Cursor Settings** → **MCP**:
+With Node.js >= 18 installed, in **Cursor Settings** → **MCP**:
 
 ```json
 {
@@ -64,7 +66,7 @@ Con Node.js >= 18 instalado, en **Cursor Settings** → **MCP**:
         "MYSQL_HOST": "localhost",
         "MYSQL_USER": "root",
         "MYSQL_PASSWORD": "",
-        "MYSQL_DATABASE": "tu_base",
+        "MYSQL_DATABASE": "your_database",
         "MYSQL_ACCESS_MODE": "readonly",
         "MYSQL_ALLOWED_DATABASES": "",
         "MYSQL_PII_COLUMNS": ""
@@ -74,21 +76,21 @@ Con Node.js >= 18 instalado, en **Cursor Settings** → **MCP**:
 }
 ```
 
-La primera vez, `npx` descarga el paquete del registry; no hace falta tener el repo en disco. Reinicia Cursor o recarga MCP tras guardar.
+The first time, `npx` downloads the package from the registry; you do not need the repo on disk. Restart Cursor or reload MCP after saving.
 
-### Desarrollo local (clonando el repo)
+### Local development (clone the repo)
 
-1. **Compilar** (opcional si usas `tsx` en el paso 2):
+1. **Build** (optional if you use `tsx` in step 2):
 
    ```bash
    npm run build
    ```
 
-2. **Añadir el MCP** en la configuración de Cursor:
-   - Abre **Cursor Settings** → **MCP** (o el archivo de configuración MCP que uses).
-   - Añade un servidor con **stdio**, por ejemplo:
+2. **Add the MCP** in Cursor configuration:
+   - Open **Cursor Settings** → **MCP** (or your MCP config file).
+   - Add a **stdio** server, for example:
 
-   **Opción A – con tsx (sin compilar):**
+   **Option A – with tsx (no build):**
 
    ```json
    {
@@ -100,17 +102,17 @@ La primera vez, `npx` descarga el paquete del registry; no hace falta tener el r
            "MYSQL_HOST": "localhost",
            "MYSQL_USER": "root",
            "MYSQL_PASSWORD": "",
-           "MYSQL_DATABASE": "tu_base",
+           "MYSQL_DATABASE": "your_database",
            "MYSQL_ACCESS_MODE": "readonly",
            "MYSQL_ALLOWED_DATABASES": "",
-           "MYSQL_PII_COLUMNS": "dni"
+           "MYSQL_PII_COLUMNS": "ssn"
          }
        }
      }
    }
    ```
 
-   **Opción B – con build (node):**
+   **Option B – with build (node):**
 
    ```json
    {
@@ -122,84 +124,84 @@ La primera vez, `npx` descarga el paquete del registry; no hace falta tener el r
            "MYSQL_HOST": "localhost",
            "MYSQL_USER": "root",
            "MYSQL_PASSWORD": "",
-           "MYSQL_DATABASE": "tu_base",
+           "MYSQL_DATABASE": "your_database",
            "MYSQL_ACCESS_MODE": "readonly",
            "MYSQL_ALLOWED_DATABASES": "",
-           "MYSQL_PII_COLUMNS": "dni"
+           "MYSQL_PII_COLUMNS": "ssn"
          }
        }
      }
    }
    ```
 
-   Ajusta la ruta (`c:/laragon/www/mysql-mcp-serve`) a la ruta real del proyecto en tu máquina.
+   Adjust the path (`c:/laragon/www/mysql-mcp-serve`) to the real project path on your machine.
 
-3. Reinicia Cursor o recarga MCP para que detecte el servidor. `MYSQL_ACCESS_MODE`, `MYSQL_ALLOWED_DATABASES` y `MYSQL_PII_COLUMNS` se leen al arrancar: un cambio posterior no aplica hasta ese reinicio.
+3. Restart Cursor or reload MCP so it picks up the server. `MYSQL_ACCESS_MODE`, `MYSQL_ALLOWED_DATABASES`, and `MYSQL_PII_COLUMNS` are read at startup; changes do not apply until you restart.
 
-## Herramienta disponible
+## Available tools
 
-- **mysql_query**: ejecuta una consulta SQL validada.
-  - `query`: texto de la consulta.
-  - `database`: (opcional) nombre de la base a usar; si no se indica, se usa `MYSQL_DATABASE`.
-  - `limit`: (opcional) filas por página, por defecto 20, máximo 100.
-  - `offset`: (opcional) filas a saltar antes de la página, por defecto 0, máximo 100000.
-  - `response_format`: (opcional) `markdown` (por defecto) o `json`.
-- **mysql_catalog**: lee la definición de vistas, triggers, funciones y procedimientos desde `information_schema`.
-  - `kind`: `view`, `trigger`, `function` o `procedure`.
-  - `name`: (opcional) nombre del objeto; solo letras, números y guion bajo. Si falta, lista todos los objetos de ese tipo. El servidor lo envía como parámetro, no lo escribe en el SQL.
-  - `database`: (opcional) base a consultar; debe estar permitida por `MYSQL_ALLOWED_DATABASES`. Si no se indica, se usa `MYSQL_DATABASE`.
-  - `limit`, `offset` y `response_format`: igual que en `mysql_query`.
+- **mysql_query**: runs a validated SQL query.
+  - `query`: query text.
+  - `database`: (optional) database to use; defaults to `MYSQL_DATABASE`.
+  - `limit`: (optional) rows per page, default 20, max 100.
+  - `offset`: (optional) rows to skip before the page, default 0, max 100000.
+  - `response_format`: (optional) `markdown` (default) or `json`.
+- **mysql_catalog**: reads view, trigger, function, and procedure definitions from `information_schema`.
+  - `kind`: `view`, `trigger`, `function`, or `procedure`.
+  - `name`: (optional) object name; letters, numbers, and underscore only. If omitted, lists all objects of that type. The server passes it as a parameter; it is not concatenated into SQL.
+  - `database`: (optional) database to query; must be allowed by `MYSQL_ALLOWED_DATABASES`. Defaults to `MYSQL_DATABASE`.
+  - `limit`, `offset`, and `response_format`: same as `mysql_query`.
 
-Un `SELECT` sin `LIMIT` propio se ejecuta con `LIMIT offset, count`. Si la consulta ya trae `LIMIT`, termina en un comentario de línea, o usa `FOR UPDATE` / `LOCK IN SHARE MODE`, MySQL devuelve como mucho `offset + limit + 1` filas y la página se corta aquí. El resto de comandos se pagina en memoria.
+A `SELECT` without its own `LIMIT` is executed with `LIMIT offset, count`. If the query already has `LIMIT`, ends with a line comment, or uses `FOR UPDATE` / `LOCK IN SHARE MODE`, MySQL returns at most `offset + limit + 1` rows and pagination is applied here. Other commands are paginated in memory.
 
-Campos estructurados de la respuesta (`structuredContent`):
+Structured response fields (`structuredContent`):
 
-| Campo | Descripción |
+| Field | Description |
 |-------|-------------|
-| `totalCount` | En un `SELECT` con el `LIMIT` añadido aquí, el offset más las filas que devolvió MySQL (incluye una de más si hay otra página). En el resto, las filas devueltas antes de cortar la página |
-| `count` | Filas de esta página |
-| `offset` | Offset aplicado |
-| `limit` | Límite aplicado |
-| `hasMore` | `true` si quedan filas después de esta página |
-| `nextOffset` | Offset de la siguiente página, o `null` si no hay más |
-| `truncated` | `true` si el texto superó los 25000 caracteres y se cortó |
-| `rows` | Filas de la página (objetos planos) |
+| `totalCount` | For a `SELECT` with `LIMIT` added here: offset plus rows MySQL returned (includes one extra row when another page exists). Otherwise, rows returned before slicing the page |
+| `count` | Rows on this page |
+| `offset` | Applied offset |
+| `limit` | Applied limit |
+| `hasMore` | `true` if rows remain after this page |
+| `nextOffset` | Offset for the next page, or `null` if none |
+| `truncated` | `true` if text exceeded 25000 characters and was cut |
+| `rows` | Page rows (plain objects) |
 
-Una respuesta de texto de más de 25000 caracteres se corta y se marca como `truncated`.
+Text responses longer than 25000 characters are truncated and marked `truncated`.
 
-### Comandos permitidos
+### Allowed commands
 
-| Tipo | Comandos |
+| Type | Commands |
 |------|----------|
-| Lectura | `SELECT`, `WITH`, `SHOW`, `DESCRIBE` / `DESC`, `EXPLAIN`, `ANALYZE`, `CHECK`, `CHECKSUM` |
-| Escritura | `INSERT` · `UPDATE` / `DELETE` (requieren `WHERE`) |
+| Read | `SELECT`, `WITH`, `SHOW`, `DESCRIBE` / `DESC`, `EXPLAIN`, `ANALYZE`, `CHECK`, `CHECKSUM` |
+| Write | `INSERT` · `UPDATE` / `DELETE` (require `WHERE`) |
 
-Ejemplos de `SHOW` permitidos: `SHOW TABLES`, `SHOW DATABASES`, `SHOW COLUMNS`, `SHOW INDEX`, `SHOW CREATE TABLE`, `SHOW TABLE STATUS`, `SHOW STATUS`, `SHOW CHARACTER SET`, `SHOW COLLATION`, `SHOW ENGINES`, `SHOW WARNINGS`, `SHOW ERRORS`, `SHOW OPEN TABLES`, `SHOW TRIGGERS`, `SHOW FUNCTION STATUS`, `SHOW PROCEDURE STATUS`, `SHOW CREATE VIEW`, `SHOW CREATE TRIGGER`, `SHOW CREATE FUNCTION`, `SHOW CREATE PROCEDURE`.
+Allowed `SHOW` examples: `SHOW TABLES`, `SHOW DATABASES`, `SHOW COLUMNS`, `SHOW INDEX`, `SHOW CREATE TABLE`, `SHOW TABLE STATUS`, `SHOW STATUS`, `SHOW CHARACTER SET`, `SHOW COLLATION`, `SHOW ENGINES`, `SHOW WARNINGS`, `SHOW ERRORS`, `SHOW OPEN TABLES`, `SHOW TRIGGERS`, `SHOW FUNCTION STATUS`, `SHOW PROCEDURE STATUS`, `SHOW CREATE VIEW`, `SHOW CREATE TRIGGER`, `SHOW CREATE FUNCTION`, `SHOW CREATE PROCEDURE`.
 
-### Restricciones de seguridad
+### Security restrictions
 
-- El servidor es de solo lectura por defecto. Las escrituras (`INSERT`, `UPDATE`, `DELETE`) requieren `MYSQL_ACCESS_MODE=readwrite`; el valor se lee al arrancar, así que cambiarlo exige reiniciar el MCP.
-- Una base marcada `:ro` en `MYSQL_ALLOWED_DATABASES` rechaza las escrituras incluso con `MYSQL_ACCESS_MODE=readwrite`. Eso incluye un nombre calificado (`analytics.tabla`) escrito desde otra base. Marcar una base como `:rw` no anula un proceso de solo lectura. La lista se lee al arrancar.
-- Un nombre calificado (`otra_base.tabla`, con espacios, comillas invertidas o comillas dobles) se comprueba contra `MYSQL_ALLOWED_DATABASES`. También `SHOW CREATE`, `DESCRIBE`, `SHOW TABLES FROM`, `ANALYZE TABLE`, `CHECK TABLE` y `CHECKSUM TABLE`.
-- `mysql_catalog` solo lee `information_schema`. No ejecuta `CALL` ni `CREATE`. El nombre del objeto no se concatena en el SQL.
-- Las columnas `email`, `correo`, `phone`, `telefono`, `password`, `contrasena`, `ssn`, `nss` y `token`, más las de `MYSQL_PII_COLUMNS`, se devuelven como `***`. Eso aplica al texto y a `structuredContent`. Una columna como `notes` no se inspecciona, aunque el texto parezca un correo.
-- Con las escrituras activadas, `UPDATE` y `DELETE` **deben** incluir una cláusula `WHERE`.
-- Se rechazan `WHERE` siempre verdaderos (`WHERE 1=1`, `WHERE (1=1)`, `WHERE TRUE`, `WHERE 1`, `WHERE 'a'='a'`, `OR 1=1`). Antes de `UPDATE` o `DELETE`, la conexión activa `sql_safe_updates`.
-- No se permiten múltiples sentencias en una sola consulta.
-- Se bloquean comandos destructivos: `DROP`, `TRUNCATE`, `ALTER`, `CREATE`, `REPLACE`, `RENAME`, `GRANT`, `REVOKE`, `LOAD DATA`, `FLUSH`, `RESET`, `PREPARE`, etc.
-- Se bloquean variantes sensibles de `SHOW`: `SHOW GRANTS`, `SHOW VARIABLES`, `SHOW PROCESSLIST`, `SHOW MASTER/SLAVE/REPLICA STATUS`, `SHOW BINARY LOGS`, etc.
-- Se bloquean funciones peligrosas: `SLEEP()`, `BENCHMARK()`, `LOAD_FILE()`, `INTO OUTFILE`, `INTO DUMPFILE`.
+- The server is read-only by default. Writes (`INSERT`, `UPDATE`, `DELETE`) require `MYSQL_ACCESS_MODE=readwrite`; the value is read at startup, so changing it requires restarting the MCP.
+- A database marked `:ro` in `MYSQL_ALLOWED_DATABASES` rejects writes even with `MYSQL_ACCESS_MODE=readwrite`. That includes a qualified name (`analytics.table`) used from another database. Marking a database `:rw` does not override a read-only process. The list is read at startup.
+- A qualified name (`other_db.table`, with spaces, backticks, or double quotes) is checked against `MYSQL_ALLOWED_DATABASES`. Same for `SHOW CREATE`, `DESCRIBE`, `SHOW TABLES FROM`, `ANALYZE TABLE`, `CHECK TABLE`, and `CHECKSUM TABLE`.
+- `mysql_catalog` only reads `information_schema`. It does not run `CALL` or `CREATE`. Object names are not concatenated into SQL.
+- Columns `email`, `correo`, `phone`, `telefono`, `password`, `contrasena`, `ssn`, `nss`, and `token`, plus those in `MYSQL_PII_COLUMNS`, are returned as `***`. This applies to text and `structuredContent`. A column like `notes` is not inspected even if the value looks like an email.
+- When writes are enabled, `UPDATE` and `DELETE` **must** include a `WHERE` clause.
+- Always-true `WHERE` clauses are rejected (`WHERE 1=1`, `WHERE (1=1)`, `WHERE TRUE`, `WHERE 1`, `WHERE 'a'='a'`, `OR 1=1`). Before `UPDATE` or `DELETE`, the connection enables `sql_safe_updates`.
+- Multiple statements in a single query are not allowed.
+- Destructive commands are blocked: `DROP`, `TRUNCATE`, `ALTER`, `CREATE`, `REPLACE`, `RENAME`, `GRANT`, `REVOKE`, `LOAD DATA`, `FLUSH`, `RESET`, `PREPARE`, etc.
+- Sensitive `SHOW` variants are blocked: `SHOW GRANTS`, `SHOW VARIABLES`, `SHOW PROCESSLIST`, `SHOW MASTER/SLAVE/REPLICA STATUS`, `SHOW BINARY LOGS`, etc.
+- Dangerous functions are blocked: `SLEEP()`, `BENCHMARK()`, `LOAD_FILE()`, `INTO OUTFILE`, `INTO DUMPFILE`.
 
-## Comandos del proyecto
+## Project commands
 
-| Comando         | Descripción                    |
-|-----------------|--------------------------------|
-| `npm install`   | Instalar dependencias          |
-| `npm run build` | Compilar TypeScript            |
-| `npm start`     | Ejecutar (usa `dist/`)         |
-| `npm run dev`   | Ejecutar con tsx (sin build)   |
-| `npm test`      | Ejecutar tests unitarios       |
+| Command | Description |
+|---------|-------------|
+| `npm install` | Install dependencies |
+| `npm run build` | Compile TypeScript |
+| `npm start` | Run (uses `dist/`) |
+| `npm run dev` | Run with tsx (no build) |
+| `npm test` | Run unit tests |
 
-## Licencia
+## License
 
 MIT
