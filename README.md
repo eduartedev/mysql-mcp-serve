@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/icon.svg" width="128" height="128" alt="mysql-mcp-server icon">
+</p>
+
 # mysql-mcp-server
 
 MCP server for querying and controlled modification of a local MySQL database. Designed for use from Cursor or another MCP client.

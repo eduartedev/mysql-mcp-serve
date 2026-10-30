@@ -8,7 +8,8 @@
     "mysql-mcp-server": "dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "assets/icon.svg"
   ],
   "repository": {
     "type": "git",

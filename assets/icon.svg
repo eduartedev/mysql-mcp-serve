@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <title>mysql-mcp-server</title>
+  <rect width="256" height="256" rx="56" fill="#0f172a"/>
+  <rect x="56" y="96" width="56" height="64" rx="16" fill="#1e293b" stroke="#94a3b8" stroke-width="6"/>
+  <rect x="144" y="96" width="56" height="64" rx="16" fill="#1e293b" stroke="#fbbf24" stroke-width="6"/>
+  <rect x="112" y="118" width="32" height="20" rx="6" fill="#f59e0b"/>
+</svg>

@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/icon.svg" width="128" height="128" alt="Icono mysql-mcp-server">
+</p>
+
 # mysql-mcp-server
 
 Servidor MCP para consultar y modificar de forma controlada una base de datos MySQL local. Pensado para usarse desde Cursor u otro cliente MCP.
