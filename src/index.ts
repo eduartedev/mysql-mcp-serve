@@ -32,7 +32,7 @@ function getPool(): Pool {
 
 const server = new McpServer({
   name: "mysql-mcp-server",
-  version: "1.0.0",
+  version: "1.0.1",
 });
 
 server.registerTool(
