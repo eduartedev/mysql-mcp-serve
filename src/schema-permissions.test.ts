@@ -54,6 +54,22 @@ describe("authorizeDatabase con allowlist unset", () => {
     const result = authorizeDatabase({ ...base, requested: "other", configured: undefined });
     expect(result.ok).toBe(false);
   });
+
+  it("sin base configurada sigue rechazando mysql.user", () => {
+    const result = authorizeDatabase({
+      ...base,
+      requested: undefined,
+      configured: undefined,
+      sql: "SELECT * FROM mysql.user",
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it("sin base configurada permite SELECT 1", () => {
+    expect(
+      authorizeDatabase({ ...base, requested: undefined, configured: undefined, sql: "SELECT 1" }),
+    ).toEqual({ ok: true, useDatabase: undefined });
+  });
 });
 
 describe("authorizeDatabase con lista app, analytics:ro y mode readwrite", () => {

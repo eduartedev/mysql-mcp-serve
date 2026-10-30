@@ -90,13 +90,24 @@ function getFirstKeyword(sql: string): string {
   return match ? match[1].toUpperCase() : "";
 }
 
-export function getMainStatementKeyword(strippedSql: string): string {
-  const first = getFirstKeyword(strippedSql);
+const MAIN_AFTER_PAREN =
+  /\)\s*(SELECT|INSERT|UPDATE|DELETE|SHOW|DESCRIBE|DESC|EXPLAIN|ANALYZE|CHECK|CHECKSUM)\b/gi;
+
+function policyText(sql: string): string {
+  if (!sql.includes("`")) return sql;
+  const result = stripSqlLiteralsAndComments(sql);
+  return result.ok ? result.policy : sql;
+}
+
+export function getMainStatementKeyword(sql: string): string {
+  const text = policyText(sql);
+  const first = getFirstKeyword(text);
   if (first !== "WITH") return first;
-  const match = strippedSql.match(
-    /\)\s*(SELECT|INSERT|UPDATE|DELETE|SHOW|DESCRIBE|DESC|EXPLAIN|ANALYZE|CHECK|CHECKSUM)\b/i,
-  );
-  return match ? match[1].toUpperCase() : first;
+  const matches = [...text.matchAll(MAIN_AFTER_PAREN)];
+  const last = matches[matches.length - 1]?.[1];
+  if (last !== undefined) return last.toUpperCase();
+  const write = text.match(/\b(INSERT|UPDATE|DELETE)\b/i);
+  return write?.[1] !== undefined ? write[1].toUpperCase() : first;
 }
 
 export function isReadOnlyCommand(sql: string): boolean {
@@ -128,8 +139,8 @@ export function hasDangerousFunction(strippedSql: string): boolean {
   return DANGEROUS_FUNCTION_PATTERNS.some((re) => re.test(normalized));
 }
 
-export function isWriteQuery(strippedSql: string): boolean {
-  return WRITE_KEYWORDS.includes(getMainStatementKeyword(strippedSql));
+export function isWriteQuery(sql: string): boolean {
+  return WRITE_KEYWORDS.includes(getMainStatementKeyword(sql));
 }
 
 export function hasWhereClause(strippedSql: string): boolean {
@@ -190,8 +201,9 @@ export function validateQuery(sql: string): ValidationResult {
     return { allowed: false, error: strippedResult.error };
   }
   const stripped = strippedResult.stripped;
+  const policy = strippedResult.policy;
 
-  if (hasDestructiveKeyword(stripped)) {
+  if (hasDestructiveKeyword(policy)) {
     return {
       allowed: false,
       error:
@@ -199,7 +211,7 @@ export function validateQuery(sql: string): ValidationResult {
     };
   }
 
-  const first = getFirstKeyword(stripped);
+  const first = getFirstKeyword(policy);
   if (!ALLOWED_FIRST_KEYWORDS.includes(first)) {
     return {
       allowed: false,
@@ -208,7 +220,7 @@ export function validateQuery(sql: string): ValidationResult {
     };
   }
 
-  if (hasSensitiveShow(stripped)) {
+  if (hasSensitiveShow(policy)) {
     return {
       allowed: false,
       error:
@@ -216,7 +228,7 @@ export function validateQuery(sql: string): ValidationResult {
     };
   }
 
-  if (hasDangerousFunction(stripped)) {
+  if (hasDangerousFunction(policy)) {
     return {
       allowed: false,
       error:
@@ -224,7 +236,7 @@ export function validateQuery(sql: string): ValidationResult {
     };
   }
 
-  if (requiresWhereClause(stripped)) {
+  if (requiresWhereClause(policy)) {
     if (!hasWhereClause(stripped)) {
       return {
         allowed: false,

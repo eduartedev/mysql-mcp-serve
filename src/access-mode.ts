@@ -16,7 +16,7 @@ export function gateQuery(sql: string, mode: AccessMode): ValidationResult {
   if (!stripped.ok) {
     return { allowed: false, error: stripped.error };
   }
-  if (mode === "readonly" && isWriteQuery(stripped.stripped)) {
+  if (mode === "readonly" && isWriteQuery(stripped.policy)) {
     return {
       allowed: false,
       error:

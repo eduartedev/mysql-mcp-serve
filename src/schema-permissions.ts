@@ -95,32 +95,36 @@ export function authorizeDatabase(input: AuthorizeInput): AuthorizeResult {
   const useDatabase = hasRequested ? requested : undefined;
 
   if (effective === undefined || effective === "") {
-    if (allowlist.kind === "unset") return { ok: true, useDatabase: undefined };
-    return { ok: false, error: ERR_MISSING_NAME };
+    if (allowlist.kind !== "unset") return { ok: false, error: ERR_MISSING_NAME };
+  } else if (!NAME_PATTERN.test(effective)) {
+    return { ok: false, error: ERR_INVALID_NAME };
   }
 
-  if (!NAME_PATTERN.test(effective)) return { ok: false, error: ERR_INVALID_NAME };
-
-  const resolved = resolvePolicy(effective, requested, configured, allowlist);
-  if ("error" in resolved) return { ok: false, error: resolved.error };
+  let resolved: { policy: SchemaPolicy } | undefined;
+  if (effective !== undefined && effective !== "") {
+    const policy = resolvePolicy(effective, requested, configured, allowlist);
+    if ("error" in policy) return { ok: false, error: policy.error };
+    resolved = policy;
+  }
 
   const strippedResult = stripSqlLiteralsAndComments(sql);
   if (!strippedResult.ok) {
     return { ok: false, error: strippedResult.error };
   }
+  const writing = isWriteQuery(strippedResult.policy);
   const schemaCheck = assertSqlSchemasAllowed(
     strippedResult.stripped,
     allowlist,
     effective,
-    isWriteQuery(strippedResult.stripped),
-    getMainStatementKeyword(strippedResult.stripped) === "DELETE",
+    writing,
+    getMainStatementKeyword(strippedResult.policy) === "DELETE",
     sql,
   );
   if (!schemaCheck.ok) return { ok: false, error: schemaCheck.error };
 
-  if (isWriteQuery(strippedResult.stripped)) {
+  if (writing) {
     if (mode === "readonly") return { ok: false, error: ERR_PROCESS_READONLY };
-    if (resolved.policy === "ro") return { ok: false, error: ERR_SCHEMA_READONLY };
+    if (resolved?.policy === "ro") return { ok: false, error: ERR_SCHEMA_READONLY };
   }
 
   return { ok: true, useDatabase };

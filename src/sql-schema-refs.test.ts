@@ -83,6 +83,27 @@ describe("assertSqlSchemasAllowed", () => {
     expect(r.ok).toBe(true);
   });
 
+  it("bloquea el join por coma, UPDATE IGNORE y SHOW IN", () => {
+    const allow = parseAllowlist("app");
+    for (const sql of [
+      "SELECT * FROM (SELECT 1) d, mysql.user",
+      "UPDATE IGNORE other.t SET x = 1 WHERE id = 1",
+      "SHOW TABLES IN mysql",
+      "SHOW COLUMNS FROM t IN mysql",
+      "SELECT mysql.user.Host FROM t",
+    ]) {
+      expect(assertSqlSchemasAllowed(sql, allow, "app").ok).toBe(false);
+    }
+  });
+
+  it("no toma t.id ni una asignación como esquema", () => {
+    const allow = parseAllowlist("app");
+    expect(assertSqlSchemasAllowed("SELECT t.id FROM t WHERE t.id = 1", allow, "app").ok).toBe(true);
+    expect(
+      assertSqlSchemasAllowed("UPDATE t SET a.x = 1 WHERE id = 1", allow, "app", true).ok,
+    ).toBe(true);
+  });
+
   it("permite leer una base :ro", () => {
     const r = assertSqlSchemasAllowed(
       "SELECT * FROM analytics.events",

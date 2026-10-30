@@ -37,6 +37,15 @@ describe("gateQuery en readonly", () => {
     expect(result.error).toContain("MYSQL_ACCESS_MODE=readwrite");
   });
 
+  it("rechaza un DELETE escondido en un identificador tras WITH", () => {
+    const result = gateQuery(
+      "WITH `) SELECT` AS x DELETE FROM t WHERE id = 1",
+      "readonly",
+    );
+    expect(result.allowed).toBe(false);
+    expect(result.error).toContain("MYSQL_ACCESS_MODE=readwrite");
+  });
+
   it("DROP devuelve el error destructivo, no el de solo lectura", () => {
     const result = gateQuery("DROP TABLE t", "readonly");
     expect(result.allowed).toBe(false);

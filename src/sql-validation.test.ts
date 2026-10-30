@@ -177,6 +177,13 @@ describe("hasDangerousFunction", () => {
   ])("detecta: %s", (sql) => expect(hasDangerousFunction(sql)).toBe(true));
 
   it("no marca SELECT normal", () => expect(hasDangerousFunction("SELECT * FROM users")).toBe(false));
+
+  it("bloquea SLEEP pegado a -- y deja pasar el comentario con espacio", () => {
+    expect(validateQuery("SELECT 1--SLEEP(0)").allowed).toBe(false);
+    expect(validateQuery("SELECT 1--LOAD_FILE('/etc/passwd')").allowed).toBe(false);
+    expect(validateQuery("SELECT 1-- SLEEP(0)").allowed).toBe(true);
+    expect(validateQuery("SELECT 'SLEEP(1)'").allowed).toBe(true);
+  });
   it("no marca SHOW", () => expect(hasDangerousFunction("SHOW TABLES")).toBe(false));
 });
 

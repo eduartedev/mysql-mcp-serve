@@ -1,5 +1,5 @@
 export type StripResult =
-  | { ok: true; stripped: string; endsInLineComment: boolean }
+  | { ok: true; stripped: string; policy: string; endsInLineComment: boolean }
   | { ok: false; error: string };
 
 const UNCLOSED =
@@ -7,8 +7,20 @@ const UNCLOSED =
 const EXECUTABLE_COMMENT =
   "La consulta contiene un comentario ejecutable (/*! */). MySQL lo correría.";
 
+function emit(out: string[], policy: string[], text: string): void {
+  out.push(text);
+  policy.push(text);
+}
+
+function startsMysqlLineComment(third: string | undefined): boolean {
+  if (third === undefined) return false;
+  const code = third.charCodeAt(0);
+  return code <= 32 || code === 127;
+}
+
 export function stripSqlLiteralsAndComments(sql: string): StripResult {
-  let out = "";
+  const out: string[] = [];
+  const policy: string[] = [];
   let i = 0;
   let endsInLineComment = false;
   const n = sql.length;
@@ -19,7 +31,7 @@ export function stripSqlLiteralsAndComments(sql: string): StripResult {
 
     if (ch === "'" || ch === '"') {
       const quote = ch;
-      out += " ";
+      emit(out, policy, " ");
       i++;
       let closed = false;
       while (i < n) {
@@ -43,12 +55,13 @@ export function stripSqlLiteralsAndComments(sql: string): StripResult {
     }
 
     if (ch === "`") {
+      policy.push(" ");
       i++;
       let closed = false;
       while (i < n) {
         if (sql[i] === "`") {
           if (sql[i + 1] === "`") {
-            out += "`";
+            out.push("`");
             i += 2;
             continue;
           }
@@ -56,7 +69,7 @@ export function stripSqlLiteralsAndComments(sql: string): StripResult {
           closed = true;
           break;
         }
-        out += sql[i];
+        out.push(sql[i]);
         i++;
       }
       if (!closed) return { ok: false, error: UNCLOSED };
@@ -64,10 +77,15 @@ export function stripSqlLiteralsAndComments(sql: string): StripResult {
     }
 
     if (ch === "-" && next === "-") {
-      endsInLineComment = true;
-      i += 2;
-      while (i < n && sql[i] !== "\n" && sql[i] !== "\r") i++;
-      continue;
+      const third = i + 2 < n ? sql[i + 2] : undefined;
+      if (startsMysqlLineComment(third)) {
+        endsInLineComment = true;
+        i += 2;
+        while (i < n && sql[i] !== "\n" && sql[i] !== "\r") i++;
+        continue;
+      }
+      // `--` al final: añadir " LIMIT" metería un espacio y MySQL comentaría el tope.
+      if (third === undefined) endsInLineComment = true;
     }
 
     if (ch === "#") {
@@ -80,7 +98,7 @@ export function stripSqlLiteralsAndComments(sql: string): StripResult {
     if (ch === "/" && next === "*") {
       i += 2;
       if (sql[i] === "!") return { ok: false, error: EXECUTABLE_COMMENT };
-      out += " ";
+      emit(out, policy, " ");
       let closed = false;
       while (i < n) {
         if (sql[i] === "*" && i + 1 < n && sql[i + 1] === "/") {
@@ -95,9 +113,15 @@ export function stripSqlLiteralsAndComments(sql: string): StripResult {
     }
 
     if (ch === "\n" || ch === "\r") endsInLineComment = false;
-    out += ch;
+    emit(out, policy, ch);
     i++;
   }
 
-  return { ok: true, stripped: out.replace(/\s+/g, " ").trim(), endsInLineComment };
+  const collapse = (parts: string[]) => parts.join("").replace(/\s+/g, " ").trim();
+  return {
+    ok: true,
+    stripped: collapse(out),
+    policy: collapse(policy),
+    endsInLineComment,
+  };
 }

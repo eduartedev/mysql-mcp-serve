@@ -130,7 +130,7 @@ export async function handleMysqlQuery(
   try {
     const stripped = stripSqlLiteralsAndComments(input.query.trim());
     if (!stripped.ok) return { ok: false, text: stripped.error };
-    const select = needsServerRowCap(stripped.stripped);
+    const select = needsServerRowCap(stripped.policy);
     const plan = select ? planSelect(input.query, input.offset, input.limit) : { sql: input.query, paged: false };
     const maxRows = input.offset + input.limit + 1;
     if (select && !plan.paged && !Number.isSafeInteger(maxRows)) {
@@ -142,7 +142,7 @@ export async function handleMysqlQuery(
       query: plan.sql,
       useDatabase: authorization.useDatabase,
       homeDatabase: input.configuredDatabase,
-      safeUpdates: isWriteQuery(stripped.stripped),
+      safeUpdates: isWriteQuery(stripped.policy),
       maxRows: select && !plan.paged ? maxRows : undefined,
     });
 
