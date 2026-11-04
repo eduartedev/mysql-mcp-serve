@@ -4,24 +4,7 @@
 
 # mysql-mcp-server
 
-MCP server for querying and controlled modification of a local MySQL database. Designed for use from Cursor or another MCP client.
-
-**Languages:** [English](README.md) · [Español](README.es.md)
-
-## Requirements
-
-- Node.js >= 18
-- Accessible MySQL (e.g. Laragon, XAMPP, or a standalone MySQL install)
-
-## Installation
-
-```bash
-npm install
-```
-
-## Configuration
-
-Connection is configured via environment variables. On startup, a `.env` file in the working directory is loaded (not committed to Git). Only `MYSQL_*` keys that are not already set in the process environment are applied.
+MCP server for querying and controlled modification of **MySQL/MariaDB or PostgreSQL**. Single binary; engine via `DB_ENGINE` or autodetect from `DB_PORT` (`5432` → PostgreSQL, `3306` → MySQL). See [README.es.md](README.es.md) for full `DB_*` configuration.
 
 | Variable         | Default | Description |
 |------------------|---------|-------------|
