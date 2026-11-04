@@ -1,4 +1,4 @@
-import { authorizeDatabase, parseAllowlist, type Allowlist } from "./schema-permissions.js";
+import { authorizeDatabase, parseAllowlist, type Allowlist } from "./mysql/schema-permissions.js";
 
 const INSERT = "INSERT INTO t (id) VALUES (1)";
 const UPDATE = "UPDATE t SET x = 1 WHERE id = 1";
@@ -47,7 +47,7 @@ describe("authorizeDatabase con allowlist unset", () => {
   it("requested distinto de configured se rechaza", () => {
     const result = authorizeDatabase({ ...base, requested: "other", configured: "app" });
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toContain("MYSQL_ALLOWED_DATABASES");
+    if (!result.ok) expect(result.error).toContain("DB_ALLOWED_DATABASES");
   });
 
   it("requested sin configured se rechaza", () => {
@@ -109,7 +109,7 @@ describe("authorizeDatabase con lista app, analytics:ro y mode readwrite", () =>
       expect(result.error).toContain(":ro");
       // El mensaje :ro menciona MYSQL_ACCESS_MODE=readwrite solo para aclarar que no basta;
       // no debe ser el mensaje del proceso, que pide definirlo.
-      expect(result.error).not.toContain("Define MYSQL_ACCESS_MODE=readwrite");
+      expect(result.error).not.toContain("Define DB_ACCESS_MODE=readwrite");
     }
   });
 
@@ -180,7 +180,7 @@ describe("authorizeDatabase con logs:rw y proceso readonly", () => {
     });
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error).toContain("MYSQL_ACCESS_MODE=readwrite");
+      expect(result.error).toContain("DB_ACCESS_MODE=readwrite");
       expect(result.error).not.toContain("(:ro)");
     }
   });

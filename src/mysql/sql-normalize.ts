@@ -84,7 +84,6 @@ export function stripSqlLiteralsAndComments(sql: string): StripResult {
         while (i < n && sql[i] !== "\n" && sql[i] !== "\r") i++;
         continue;
       }
-      // `--` al final: añadir " LIMIT" metería un espacio y MySQL comentaría el tope.
       if (third === undefined) endsInLineComment = true;
     }
 

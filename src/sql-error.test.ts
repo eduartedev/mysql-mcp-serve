@@ -1,4 +1,4 @@
-import { toActionableSqlError } from "./sql-error.js";
+import { toActionableSqlError } from "./mysql/sql-error.js";
 
 function driverError(code: string, message = "driver message"): Error & { code: string } {
   const err = new Error(message) as Error & { code: string };
@@ -34,8 +34,8 @@ describe("toActionableSqlError", () => {
     expect(msg).toContain("ER_ACCESS_DENIED_ERROR");
   });
 
-  it("ECONNREFUSED menciona MYSQL_HOST", () => {
-    expect(toActionableSqlError(driverError("ECONNREFUSED"))).toContain("MYSQL_HOST");
+  it("ECONNREFUSED menciona DB_HOST", () => {
+    expect(toActionableSqlError(driverError("ECONNREFUSED"))).toContain("DB_HOST");
   });
 
   it("no filtra líneas de stack", () => {

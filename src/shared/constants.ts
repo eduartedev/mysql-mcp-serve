@@ -3,3 +3,6 @@ export const DEFAULT_PAGE_LIMIT = 20;
 export const MAX_PAGE_LIMIT = 100;
 export const MAX_OFFSET = 100_000;
 export const QUERY_TIMEOUT_MS = 15_000;
+
+export const SERVER_NAME = "mysql-mcp-server";
+export const SERVER_VERSION = "1.1.0";

@@ -1,9 +1,9 @@
-import { applyMysqlEnv, loadMysqlEnvFile } from "./load-env.js";
+import { applyDbEnv, loadDbEnvFile } from "./shared/load-env.js";
 
 describe("applyMysqlEnv", () => {
   it("rellena solo MYSQL_* que faltan y no pisa las que ya existen", () => {
     const env: NodeJS.ProcessEnv = { MYSQL_USER: "root", MYSQL_PASSWORD: "" };
-    applyMysqlEnv(
+    applyDbEnv(
       [
         "# comentario",
         "",
@@ -24,7 +24,7 @@ describe("applyMysqlEnv", () => {
 
   it("quita un par de comillas", () => {
     const env: NodeJS.ProcessEnv = {};
-    applyMysqlEnv("MYSQL_HOST='localhost'", env);
+    applyDbEnv("MYSQL_HOST='localhost'", env);
     expect(env.MYSQL_HOST).toBe("localhost");
   });
 });
@@ -33,7 +33,7 @@ describe("loadMysqlEnvFile", () => {
   it("un archivo ausente no lanza", () => {
     const env: NodeJS.ProcessEnv = {};
     expect(() =>
-      loadMysqlEnvFile(".env", env, () => {
+      loadDbEnvFile(".env", env, () => {
         throw new Error("no está");
       }),
     ).not.toThrow();

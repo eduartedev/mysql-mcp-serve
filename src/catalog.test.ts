@@ -1,5 +1,5 @@
-import { CatalogSchema, prepareCatalog, type CatalogKind } from "./catalog.js";
-import { parseAllowlist } from "./schema-permissions.js";
+import { CatalogSchema, prepareCatalog, type CatalogKind } from "./mysql/catalog.js";
+import { parseAllowlist } from "./mysql/schema-permissions.js";
 
 const OBJECT_NAME_ERROR =
   "Nombre de objeto no válido. Solo se permiten letras, números y guion bajo.";
@@ -88,7 +88,7 @@ describe("prepareCatalog", () => {
     const result = prepare({ database: "otra" });
     expect(result).toEqual({
       ok: false,
-      error: "La base no está permitida por MYSQL_ALLOWED_DATABASES.",
+      error: "La base no está permitida por DB_ALLOWED_DATABASES.",
     });
   });
 
@@ -99,11 +99,11 @@ describe("prepareCatalog", () => {
     expect(result.params).toEqual(["analytics"]);
   });
 
-  it("sin configured ni database exige MYSQL_DATABASE", () => {
+  it("sin configured ni database exige DB_DATABASE", () => {
     const result = prepare({ database: undefined, configured: undefined });
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error).toContain("MYSQL_DATABASE");
+    expect(result.error).toContain("DB_DATABASE");
   });
 
   it("sin allowlist y sin base devuelve el error de base faltante", () => {
@@ -117,7 +117,7 @@ describe("prepareCatalog", () => {
     });
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error).toContain("MYSQL_DATABASE");
+    expect(result.error).toContain("DB_DATABASE");
   });
 });
 

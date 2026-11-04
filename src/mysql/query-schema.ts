@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DEFAULT_PAGE_LIMIT, MAX_OFFSET, MAX_PAGE_LIMIT } from "./constants.js";
+import { DEFAULT_PAGE_LIMIT, MAX_OFFSET, MAX_PAGE_LIMIT } from "../shared/constants.js";
 
 export const QuerySchema = z
   .object({
@@ -13,7 +13,7 @@ export const QuerySchema = z
     database: z
       .string()
       .optional()
-      .describe("Base a seleccionar con USE antes de ejecutar. Opcional si MYSQL_DATABASE ya está definida."),
+      .describe("Base a seleccionar con USE antes de ejecutar. Opcional si DB_DATABASE ya está definida."),
     limit: z
       .number()
       .int()

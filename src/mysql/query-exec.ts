@@ -1,10 +1,10 @@
-import type { AccessMode } from "./access-mode.js";
-import { gateQuery } from "./access-mode.js";
+import type { AccessMode } from "../shared/access-mode.js";
+import { gateQuery } from "./gate-query.js";
 import type { Pool } from "./db.js";
-import { formatQueryResult, type ResponseFormat } from "./format-result.js";
+import { formatQueryResult, type ResponseFormat } from "../shared/format-result.js";
 import { authorizeDatabase, type Allowlist } from "./schema-permissions.js";
 import { stripSqlLiteralsAndComments } from "./sql-normalize.js";
-import { QUERY_TIMEOUT_MS } from "./constants.js";
+import { QUERY_TIMEOUT_MS } from "../shared/constants.js";
 import { getMainStatementKeyword, isWriteQuery } from "./sql-validation.js";
 import { toActionableSqlError } from "./sql-error.js";
 
