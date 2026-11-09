@@ -1,17 +1,20 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-const xml = readFileSync(join(process.cwd(), "evaluations", "mysql.xml"), "utf8");
+function loadXml(name: string): string {
+  return readFileSync(join(process.cwd(), "evaluations", name), "utf8");
+}
 
-function extract(tag: string): string[] {
+function extract(xml: string, tag: string): string[] {
   const re = new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, "g");
   return [...xml.matchAll(re)].map((m) => (m[1] ?? "").trim());
 }
 
 describe("evaluations/mysql.xml", () => {
+  const xml = loadXml("mysql.xml");
   const pairs = xml.match(/<qa_pair>/g) ?? [];
-  const questions = extract("question");
-  const answers = extract("answer");
+  const questions = extract(xml, "question");
+  const answers = extract(xml, "answer");
 
   it("tiene exactamente 10 pares", () => {
     expect(pairs).toHaveLength(10);
@@ -27,5 +30,16 @@ describe("evaluations/mysql.xml", () => {
     for (const q of questions) {
       expect(q).not.toMatch(/\b(INSERT|UPDATE|DELETE|DROP|CALL)\b/i);
     }
+  });
+});
+
+describe("evaluations/postgres.xml", () => {
+  const xml = loadXml("postgres.xml");
+  const pairs = xml.match(/<qa_pair>/g) ?? [];
+
+  it("tiene exactamente 10 pares", () => {
+    expect(pairs).toHaveLength(10);
+    expect(extract(xml, "question")).toHaveLength(10);
+    expect(extract(xml, "answer")).toHaveLength(10);
   });
 });

@@ -1,7 +1,7 @@
-import { QUERY_TIMEOUT_MS } from "./constants.js";
-import { executeOnSession, handleMysqlQuery } from "./query-exec.js";
-import { parseAllowlist } from "./schema-permissions.js";
-import { parsePiiColumns } from "./pii.js";
+import { QUERY_TIMEOUT_MS } from "./shared/constants.js";
+import { executeOnSession, handleMysqlQuery } from "./mysql/query-exec.js";
+import { parseAllowlist } from "./mysql/schema-permissions.js";
+import { parsePiiColumns } from "./shared/pii.js";
 
 type QueryArg = string | { sql: string; values?: unknown[]; timeout?: number };
 

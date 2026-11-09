@@ -1,0 +1,42 @@
+<evaluation>
+  <qa_pair>
+    <question>Con postgres_query, ¿cuántas filas devuelve SELECT 1?</question>
+    <answer>1</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>¿Qué herramienta lista definiciones de vistas en PostgreSQL?</question>
+    <answer>postgres_catalog</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>¿Qué variable autodetecta PostgreSQL cuando vale 5432 y DB_ENGINE está vacío?</question>
+    <answer>DB_PORT</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>¿Qué comando de sesión usa el MCP en lugar de USE para PostgreSQL?</question>
+    <answer>SET search_path</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>¿Qué schema del sistema bloquea el MCP al calificar tablas?</question>
+    <answer>pg_catalog</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>¿Qué función peligrosa bloquea la validación de lectura?</question>
+    <answer>pg_sleep</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>¿Qué valor de DB_ACCESS_MODE habilita UPDATE?</question>
+    <answer>readwrite</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>¿Qué argumento de postgres_query reemplaza database de MySQL?</question>
+    <answer>schema</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>¿Qué valor de DB_SSL activa TLS?</question>
+    <answer>required</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>¿Qué motor usa el MCP si no hay DB_ENGINE ni DB_PORT reconocible?</question>
+    <answer>mysql</answer>
+  </qa_pair>
+</evaluation>

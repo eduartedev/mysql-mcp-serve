@@ -1,4 +1,4 @@
-import type { Allowlist } from "./schema-permissions.js";
+import type { Allowlist } from "../shared/allowlist.js";
 
 const SYSTEM_SCHEMAS = new Set([
   "mysql",
@@ -29,13 +29,13 @@ const MAINT_QUOTED =
   /\b(?:ANALYZE|CHECK|CHECKSUM)\s+TABLE\s+"([A-Za-z0-9_]+)"\s*\.\s*"[A-Za-z0-9_]+"/gi;
 
 const ERR_SCHEMA_IN_SQL =
-  "La consulta referencia una base no permitida por MYSQL_ALLOWED_DATABASES.";
+  "La consulta referencia una base no permitida por DB_ALLOWED_DATABASES.";
 const ERR_SYSTEM_SCHEMA =
   "La consulta referencia una base del sistema (mysql, information_schema, etc.).";
 const ERR_SCHEMA_NOT_CONFIGURED =
-  "La consulta referencia otra base distinta de MYSQL_DATABASE.";
+  "La consulta referencia otra base distinta de DB_DATABASE.";
 const ERR_SCHEMA_READONLY =
-  "La base está marcada como solo lectura (:ro). MYSQL_ACCESS_MODE=readwrite no habilita escritura en ella.";
+  "La base está marcada como solo lectura (:ro). DB_ACCESS_MODE=readwrite no habilita escritura en ella.";
 
 function remember(refs: Map<string, boolean>, schema: string, write: boolean): void {
   const key = schema.toLowerCase();

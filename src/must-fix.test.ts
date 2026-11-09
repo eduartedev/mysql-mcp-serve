@@ -1,8 +1,8 @@
-import { handleMysqlQuery } from "./query-exec.js";
-import { parseAllowlist, authorizeDatabase } from "./schema-permissions.js";
-import { parsePiiColumns } from "./pii.js";
-import { validateQuery } from "./sql-validation.js";
-import { stripSqlLiteralsAndComments } from "./sql-normalize.js";
+import { handleMysqlQuery } from "./mysql/query-exec.js";
+import { parseAllowlist, authorizeDatabase } from "./mysql/schema-permissions.js";
+import { parsePiiColumns } from "./shared/pii.js";
+import { validateQuery } from "./mysql/sql-validation.js";
+import { stripSqlLiteralsAndComments } from "./mysql/sql-normalize.js";
 
 type QueryArg = string | { sql: string; values?: unknown[] };
 

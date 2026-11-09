@@ -1,5 +1,5 @@
-import { assertSqlSchemasAllowed } from "./sql-schema-refs.js";
-import { parseAllowlist } from "./schema-permissions.js";
+import { assertSqlSchemasAllowed } from "./mysql/sql-schema-refs.js";
+import { parseAllowlist } from "./mysql/schema-permissions.js";
 
 describe("assertSqlSchemasAllowed", () => {
   it("bloquea mysql.user", () => {

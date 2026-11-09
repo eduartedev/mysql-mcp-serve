@@ -1,6 +1,6 @@
-import { CHARACTER_LIMIT } from "./constants.js";
-import { formatQueryResult, QueryOutputSchema } from "./format-result.js";
-import { QuerySchema } from "./query-schema.js";
+import { CHARACTER_LIMIT } from "./shared/constants.js";
+import { formatQueryResult, QueryOutputSchema } from "./shared/format-result.js";
+import { QuerySchema } from "./mysql/query-schema.js";
 
 const fiveRows = Array.from({ length: 5 }, (_, i) => ({ id: i + 1, name: `n${i + 1}` }));
 
