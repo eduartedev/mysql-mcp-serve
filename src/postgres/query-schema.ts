@@ -1,0 +1,35 @@
+import { z } from "zod";
+import { DEFAULT_PAGE_LIMIT, MAX_OFFSET, MAX_PAGE_LIMIT } from "../shared/constants.js";
+
+export const QuerySchema = z
+  .object({
+    query: z
+      .string()
+      .min(1, "query es obligatoria")
+      .max(16 * 1024)
+      .describe(
+        "Una sola sentencia. Lectura: SELECT, WITH, EXPLAIN. Escritura: INSERT, o UPDATE/DELETE con WHERE.",
+      ),
+    schema: z
+      .string()
+      .optional()
+      .describe(
+        "Schema PostgreSQL (search_path). Opcional si DB_DATABASE / schema por defecto ya está definido.",
+      ),
+    limit: z
+      .number()
+      .int()
+      .min(1)
+      .max(MAX_PAGE_LIMIT)
+      .default(DEFAULT_PAGE_LIMIT),
+    offset: z
+      .number()
+      .int()
+      .min(0)
+      .max(MAX_OFFSET)
+      .default(0),
+    response_format: z.enum(["markdown", "json"]).default("markdown"),
+  })
+  .strict();
+
+export type QueryInput = z.infer<typeof QuerySchema>;

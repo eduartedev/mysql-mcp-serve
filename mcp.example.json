@@ -1,17 +1,32 @@
 {
   "mcpServers": {
-    "mysql": {
+    "database": {
       "command": "npx",
       "args": ["-y", "@eduartedev/mysql-mcp-server"],
       "env": {
-        "MYSQL_HOST": "localhost",
-        "MYSQL_PORT": "3306",
-        "MYSQL_USER": "app",
-        "MYSQL_PASSWORD": "tu_password",
-        "MYSQL_DATABASE": "tienda",
-        "MYSQL_ACCESS_MODE": "readonly",
-        "MYSQL_ALLOWED_DATABASES": "tienda,analytics:ro",
-        "MYSQL_PII_COLUMNS": "dni"
+        "DB_ENGINE": "mysql",
+        "DB_HOST": "localhost",
+        "DB_PORT": "3306",
+        "DB_USER": "app",
+        "DB_PASSWORD": "tu_password",
+        "DB_DATABASE": "tienda",
+        "DB_ACCESS_MODE": "readonly",
+        "DB_ALLOWED_DATABASES": "tienda,analytics:ro",
+        "DB_PII_COLUMNS": "dni"
+      }
+    },
+    "database-postgres-example": {
+      "command": "npx",
+      "args": ["-y", "@eduartedev/mysql-mcp-server"],
+      "env": {
+        "DB_HOST": "localhost",
+        "DB_PORT": "5432",
+        "DB_USER": "postgres",
+        "DB_PASSWORD": "tu_password",
+        "DB_DATABASE": "app",
+        "DB_SCHEMA": "public",
+        "DB_ACCESS_MODE": "readonly",
+        "DB_ALLOWED_DATABASES": "public"
       }
     }
   }

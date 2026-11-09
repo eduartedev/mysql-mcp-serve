@@ -19,3 +19,6 @@ npm-debug.log*
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Skill empaquetado para Agensi (local, no versionado)
+agensi-skill/

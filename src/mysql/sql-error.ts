@@ -8,9 +8,9 @@ const MESSAGES: Record<string, string> = {
   ER_PARSE_ERROR:
     "Error SQL (ER_PARSE_ERROR): sintaxis inválida. Solo se permite una única sentencia por consulta; revisa la sintaxis.",
   ER_ACCESS_DENIED_ERROR:
-    "Error SQL (ER_ACCESS_DENIED_ERROR): el usuario o la contraseña fueron rechazados. Revisa MYSQL_USER y MYSQL_PASSWORD.",
+    "Error SQL (ER_ACCESS_DENIED_ERROR): el usuario o la contraseña fueron rechazados. Revisa DB_USER y DB_PASSWORD.",
   ECONNREFUSED:
-    "Error SQL (ECONNREFUSED): no se pudo conectar. MYSQL_HOST y MYSQL_PORT no son alcanzables; verifica que MySQL esté en ejecución.",
+    "Error SQL (ECONNREFUSED): no se pudo conectar. DB_HOST y DB_PORT no son alcanzables; verifica que MySQL esté en ejecución.",
 };
 
 function readCode(err: unknown): string | undefined {
@@ -23,11 +23,6 @@ function readCode(err: unknown): string | undefined {
   return undefined;
 }
 
-/**
- * Convierte un error del driver en un mensaje accionable en español.
- * Nunca incluye stack, mensaje crudo del driver ni variables de entorno:
- * el código del error basta para que el agente corrija la consulta.
- */
 export function toActionableSqlError(err: unknown): string {
   const code = readCode(err);
   if (code !== undefined && Object.hasOwn(MESSAGES, code)) {

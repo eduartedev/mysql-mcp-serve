@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 
-const KEY = /^MYSQL_[A-Z0-9_]+$/;
+const KEY = /^(DB|MYSQL|POSTGRES)_[A-Z0-9_]+$/;
 
-/** Aplica claves MYSQL_* que el entorno aún no trae. No pisa un valor ya definido. */
-export function applyMysqlEnv(text: string, env: NodeJS.ProcessEnv): void {
+/** Aplica claves DB_*, MYSQL_* y POSTGRES_* que el entorno aún no trae. No pisa un valor ya definido. */
+export function applyDbEnv(text: string, env: NodeJS.ProcessEnv): void {
   for (const line of text.split(/\r?\n/)) {
     const trimmed = line.trim();
     if (trimmed === "" || trimmed.startsWith("#")) continue;
@@ -23,7 +23,7 @@ export function applyMysqlEnv(text: string, env: NodeJS.ProcessEnv): void {
   }
 }
 
-export function loadMysqlEnvFile(
+export function loadDbEnvFile(
   path = ".env",
   env: NodeJS.ProcessEnv = process.env,
   read: (file: string) => string = (file) => readFileSync(file, "utf8"),
@@ -34,5 +34,19 @@ export function loadMysqlEnvFile(
   } catch {
     return;
   }
-  applyMysqlEnv(text, env);
+  applyDbEnv(text, env);
+}
+
+/** @deprecated use loadDbEnvFile */
+export function loadMysqlEnvFile(
+  path = ".env",
+  env: NodeJS.ProcessEnv = process.env,
+  read: (file: string) => string = (file) => readFileSync(file, "utf8"),
+): void {
+  loadDbEnvFile(path, env, read);
+}
+
+/** @deprecated use applyDbEnv */
+export function applyMysqlEnv(text: string, env: NodeJS.ProcessEnv): void {
+  applyDbEnv(text, env);
 }

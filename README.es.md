@@ -4,14 +4,12 @@
 
 # mysql-mcp-server
 
-Servidor MCP para consultar y modificar de forma controlada una base de datos MySQL local. Pensado para usarse desde Cursor u otro cliente MCP.
-
-**Idiomas:** [English](README.md) · [Español](README.es.md)
+Servidor MCP para consultar y modificar de forma controlada MySQL/MariaDB o PostgreSQL. Un solo binario; el motor se elige con `DB_ENGINE` o, si falta, con `DB_PORT` (`5432` → PostgreSQL, `3306` → MySQL). Pensado para Cursor u otro cliente MCP.
 
 ## Requisitos
 
 - Node.js >= 18
-- MySQL accesible (por ejemplo Laragon, XAMPP, o MySQL instalado)
+- MySQL/MariaDB o PostgreSQL accesible (local, Laragon, RDS, etc.)
 
 ## Instalación
 
@@ -21,7 +19,29 @@ npm install
 
 ## Configuración
 
-Conexión mediante variables de entorno. Al arrancar se lee un `.env` en el directorio de trabajo (no se sube a Git). Solo entran claves `MYSQL_*` que el proceso aún no trae.
+Conexión mediante variables de entorno. Al arrancar se lee un `.env` en el directorio de trabajo (no se sube a Git). Se aceptan claves `DB_*`, `MYSQL_*` y `POSTGRES_*` que el proceso aún no trae.
+
+### Motor
+
+| Variable | Por defecto | Descripción |
+|----------|-------------|-------------|
+| `DB_ENGINE` | autodetect / `mysql` | `mysql` o `postgres`. Si falta, `DB_PORT=5432` → postgres; `DB_PORT=3306` → mysql |
+| `DB_HOST` | `localhost` | Host (antes que `MYSQL_HOST` / `POSTGRES_HOST`) |
+| `DB_PORT` | 3306 o 5432 según motor | Puerto |
+| `DB_USER` | `root` / `postgres` | Usuario |
+| `DB_PASSWORD` | (vacío) | Contraseña |
+| `DB_DATABASE` | (opcional) | Base de conexión MySQL o PostgreSQL |
+| `DB_SCHEMA` | `public` (solo Postgres) | Schema por defecto para `search_path` y allowlist |
+| `DB_ACCESS_MODE` | readonly | Solo `readwrite` habilita escrituras |
+| `DB_ALLOWED_DATABASES` | (vacío) | Allowlist `nombre`, `nombre:ro`, `nombre:rw`. En Postgres son **schemas** |
+| `DB_PII_COLUMNS` | (vacío) | Columnas extra a enmascarar |
+| `DB_SSL` | (vacío) | Solo `required` activa TLS |
+| `DB_SSL_CA` / `CERT` / `KEY` | (opcional) | Rutas PEM en disco |
+| `DB_SSL_REJECT_UNAUTHORIZED` | true | Solo `false` desactiva verify |
+
+Las variables `MYSQL_*` y `POSTGRES_*` siguen como respaldo (`DB_*` gana si ambas están definidas).
+
+### MySQL / MariaDB (alias `MYSQL_*`)
 
 | Variable         | Por defecto | Descripción              |
 |------------------|-------------|--------------------------|
@@ -39,7 +59,28 @@ Conexión mediante variables de entorno. Al arrancar se lee un `.env` en el dire
 | `MYSQL_SSL_KEY` | (opcional) | Ruta a la clave privada de cliente (mTLS). Exige definir también `MYSQL_SSL_CERT` |
 | `MYSQL_SSL_REJECT_UNAUTHORIZED` | true | Solo el valor exacto `false` desactiva la verificación del certificado del servidor. Cualquier otro valor la mantiene activa |
 
-Las variables `MYSQL_SSL*` solo aceptan rutas a archivos PEM en disco, nunca el contenido del certificado. Se leen una sola vez, al crear el pool de conexiones (en la primera consulta tras arrancar el servidor); cambiarlas exige reiniciar el MCP. `rejectUnauthorized` es `true` por defecto cuando TLS está activo. MariaDB usa el mismo cliente mysql2, por lo que la configuración es idéntica.
+MariaDB usa el mismo cliente mysql2; la configuración es idéntica.
+
+### PostgreSQL
+
+Tools: `postgres_query`, `postgres_catalog`. El argumento **`schema`** (no `database`) ajusta `search_path`. RDS suele exigir `DB_SSL=required` y `DB_SSL_CA` apuntando al bundle PEM de AWS. Si el puerto no es 5432, define `DB_ENGINE=postgres`.
+
+Ejemplo `.env` Postgres:
+
+```
+DB_HOST=tu-instancia.region.rds.amazonaws.com
+DB_PORT=5432
+DB_USER=app_readonly
+DB_PASSWORD=tu_password
+DB_DATABASE=app
+DB_SCHEMA=public
+DB_ACCESS_MODE=readonly
+DB_ALLOWED_DATABASES=public,reporting:ro
+DB_SSL=required
+DB_SSL_CA=C:/ruta/global-bundle.pem
+```
+
+**Idiomas:** [English](README.md) · [Español](README.es.md)
 
 Ejemplo `.env`:
 
@@ -144,7 +185,12 @@ La primera vez, `npx` descarga el paquete del registry; no hace falta tener el r
 
 ## Herramienta disponible
 
-- **mysql_query**: ejecuta una consulta SQL validada.
+Según el motor activo:
+
+- **mysql_query** / **mysql_catalog** (MySQL/MariaDB)
+- **postgres_query** / **postgres_catalog** (PostgreSQL)
+
+### mysql_query
   - `query`: texto de la consulta.
   - `database`: (opcional) nombre de la base a usar; si no se indica, se usa `MYSQL_DATABASE`.
   - `limit`: (opcional) filas por página, por defecto 20, máximo 100.

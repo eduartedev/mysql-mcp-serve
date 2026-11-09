@@ -1,12 +1,5 @@
 import { stripSqlLiteralsAndComments } from "./sql-normalize.js";
 
-/**
- * Validación de SQL (Nivel B):
- * - Lectura: SELECT, WITH, SHOW, DESCRIBE, DESC, EXPLAIN, ANALYZE, CHECK, CHECKSUM
- * - Escritura controlada: INSERT libre; UPDATE/DELETE solo con cláusula WHERE
- * - Se bloquean DDL/DCL destructivos, SHOW sensibles y funciones peligrosas
- */
-
 const READ_ONLY_KEYWORDS = [
   "SELECT",
   "SHOW",
@@ -48,7 +41,6 @@ const DESTRUCTIVE_KEYWORDS = [
   "\\.",
 ];
 
-/** Patrones seguros que contienen palabras clave destructivas pero son inofensivos. */
 const SAFE_EXCEPTIONS: RegExp[] = [/\bSHOW\s+CREATE\b/i];
 
 const SENSITIVE_SHOW_PATTERNS: RegExp[] = [
@@ -69,7 +61,6 @@ const DANGEROUS_FUNCTION_PATTERNS: RegExp[] = [
   /\bINTO\s+DUMPFILE\b/i,
 ];
 
-/** WHERE que afectan todas las filas de forma obvia. */
 const ALWAYS_TRUE_WHERE_PATTERNS: RegExp[] = [
   /\bWHERE\s+1\s*=\s*1\b/i,
   /\bWHERE\s+TRUE\b/i,
@@ -162,7 +153,6 @@ export function hasAlwaysTrueWhere(sql: string, strippedSql: string): boolean {
   return false;
 }
 
-/** UPDATE/DELETE (o WITH que los contiene) requieren WHERE. */
 export function requiresWhereClause(strippedSql: string): boolean {
   const main = getMainStatementKeyword(strippedSql);
   return main === "UPDATE" || main === "DELETE";
@@ -180,9 +170,6 @@ export interface ValidationResult {
   error?: string;
 }
 
-/**
- * Valida consultas de lectura ampliada y escritura controlada (Nivel B).
- */
 export function validateQuery(sql: string): ValidationResult {
   const trimmed = sql.trim();
   if (!trimmed) {

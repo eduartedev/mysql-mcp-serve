@@ -1,4 +1,5 @@
-import { gateQuery, resolveAccessMode, toolAnnotations } from "./access-mode.js";
+import { resolveAccessMode, toolAnnotations } from "./shared/access-mode.js";
+import { gateQuery } from "./mysql/gate-query.js";
 
 describe("resolveAccessMode", () => {
   it.each([undefined, "", "readonly", "READWRITE", "ReadWrite", "read-write", "true"])(
@@ -24,7 +25,7 @@ describe("gateQuery en readonly", () => {
   it("rechaza INSERT con mensaje de modo solo lectura", () => {
     const result = gateQuery("INSERT INTO t (id) VALUES (1)", "readonly");
     expect(result.allowed).toBe(false);
-    expect(result.error).toContain("MYSQL_ACCESS_MODE=readwrite");
+    expect(result.error).toContain("DB_ACCESS_MODE=readwrite");
   });
 
   it.each([
@@ -34,7 +35,7 @@ describe("gateQuery en readonly", () => {
   ])("rechaza %s", (sql) => {
     const result = gateQuery(sql, "readonly");
     expect(result.allowed).toBe(false);
-    expect(result.error).toContain("MYSQL_ACCESS_MODE=readwrite");
+    expect(result.error).toContain("DB_ACCESS_MODE=readwrite");
   });
 
   it("rechaza un DELETE escondido en un identificador tras WITH", () => {
@@ -43,7 +44,7 @@ describe("gateQuery en readonly", () => {
       "readonly",
     );
     expect(result.allowed).toBe(false);
-    expect(result.error).toContain("MYSQL_ACCESS_MODE=readwrite");
+    expect(result.error).toContain("DB_ACCESS_MODE=readwrite");
   });
 
   it("DROP devuelve el error destructivo, no el de solo lectura", () => {

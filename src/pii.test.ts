@@ -1,5 +1,5 @@
-import { formatQueryResult } from "./format-result.js";
-import { isPiiColumn, parsePiiColumns } from "./pii.js";
+import { formatQueryResult } from "./shared/format-result.js";
+import { isPiiColumn, parsePiiColumns } from "./shared/pii.js";
 
 const defaults = parsePiiColumns(undefined);
 

@@ -1,8 +1,9 @@
-import { createPool, resolveMysqlSsl } from "./db.js";
+import { createPool } from "./mysql/db.js";
+import { resolveDbSsl } from "./shared/ssl.js";
 
 const INVALID =
-  "MYSQL_SSL no es válido. Usa required o déjalo vacío para desactivar TLS.";
-const MTLS = "MYSQL_SSL_CERT y MYSQL_SSL_KEY deben definirse juntos para mTLS.";
+  "DB_SSL no es válido. Usa required o déjalo vacío para desactivar TLS.";
+const MTLS = "DB_SSL_CERT y DB_SSL_KEY deben definirse juntos para mTLS.";
 
 const pem = (name: string) =>
   `-----BEGIN CERTIFICATE-----\n${name}\n-----END CERTIFICATE-----`;
@@ -17,52 +18,52 @@ beforeEach(() => {
   calls.length = 0;
 });
 
-describe("resolveMysqlSsl", () => {
+describe("resolveDbSsl", () => {
   it("sin MYSQL_SSL o vacío no define ssl", () => {
-    expect(resolveMysqlSsl({}, fakeRead)).toEqual({});
-    expect(resolveMysqlSsl({ MYSQL_SSL: "" }, fakeRead)).toEqual({});
-    expect(resolveMysqlSsl({ MYSQL_SSL: "   " }, fakeRead)).toEqual({});
+    expect(resolveDbSsl({}, fakeRead)).toEqual({});
+    expect(resolveDbSsl({ ssl: "" }, fakeRead)).toEqual({});
+    expect(resolveDbSsl({ ssl: "   " }, fakeRead)).toEqual({});
     expect(calls).toEqual([]);
   });
 
   it("required activa TLS con rejectUnauthorized true y sin ca/cert/key", () => {
-    const result = resolveMysqlSsl({ MYSQL_SSL: " required " }, fakeRead);
+    const result = resolveDbSsl({ ssl: " required " }, fakeRead);
     expect(result).toEqual({ ssl: { rejectUnauthorized: true } });
   });
 
   it("solo el valor exacto false desactiva rejectUnauthorized", () => {
     expect(
-      resolveMysqlSsl(
-        { MYSQL_SSL: "required", MYSQL_SSL_REJECT_UNAUTHORIZED: "false" },
+      resolveDbSsl(
+        { ssl: "required", rejectUnauthorized: "false" },
         fakeRead,
       ),
     ).toEqual({ ssl: { rejectUnauthorized: false } });
     expect(
-      resolveMysqlSsl(
-        { MYSQL_SSL: "required", MYSQL_SSL_REJECT_UNAUTHORIZED: "FALSE" },
+      resolveDbSsl(
+        { ssl: "required", rejectUnauthorized: "FALSE" },
         fakeRead,
       ),
     ).toEqual({ ssl: { rejectUnauthorized: true } });
     expect(
-      resolveMysqlSsl(
-        { MYSQL_SSL: "required", MYSQL_SSL_REJECT_UNAUTHORIZED: "0" },
+      resolveDbSsl(
+        { ssl: "required", rejectUnauthorized: "0" },
         fakeRead,
       ),
     ).toEqual({ ssl: { rejectUnauthorized: true } });
   });
 
   it("preferred o yes devuelven el error de valor no válido", () => {
-    expect(resolveMysqlSsl({ MYSQL_SSL: "preferred" }, fakeRead)).toEqual({
+    expect(resolveDbSsl({ ssl: "preferred" }, fakeRead)).toEqual({
       error: INVALID,
     });
-    expect(resolveMysqlSsl({ MYSQL_SSL: "yes" }, fakeRead)).toEqual({
+    expect(resolveDbSsl({ ssl: "yes" }, fakeRead)).toEqual({
       error: INVALID,
     });
   });
 
   it("lee la CA desde la ruta indicada", () => {
-    const result = resolveMysqlSsl(
-      { MYSQL_SSL: "required", MYSQL_SSL_CA: "/ca.pem" },
+    const result = resolveDbSsl(
+      { ssl: "required", ca: "/ca.pem" },
       fakeRead,
     );
     expect(calls).toEqual(["/ca.pem"]);
@@ -72,11 +73,11 @@ describe("resolveMysqlSsl", () => {
   });
 
   it("cert y key juntos habilitan mTLS", () => {
-    const result = resolveMysqlSsl(
+    const result = resolveDbSsl(
       {
-        MYSQL_SSL: "required",
-        MYSQL_SSL_CERT: "/client.pem",
-        MYSQL_SSL_KEY: "/client.key",
+        ssl: "required",
+        cert: "/client.pem",
+        key: "/client.key",
       },
       fakeRead,
     );
@@ -91,8 +92,8 @@ describe("resolveMysqlSsl", () => {
 
   it("cert sin key es un error", () => {
     expect(
-      resolveMysqlSsl(
-        { MYSQL_SSL: "required", MYSQL_SSL_CERT: "/client.pem" },
+      resolveDbSsl(
+        { ssl: "required", cert: "/client.pem" },
         fakeRead,
       ),
     ).toEqual({ error: MTLS });
@@ -101,8 +102,8 @@ describe("resolveMysqlSsl", () => {
 
   it("key sin cert es un error", () => {
     expect(
-      resolveMysqlSsl(
-        { MYSQL_SSL: "required", MYSQL_SSL_KEY: "/client.key" },
+      resolveDbSsl(
+        { ssl: "required", key: "/client.key" },
         fakeRead,
       ),
     ).toEqual({ error: MTLS });
@@ -112,8 +113,8 @@ describe("resolveMysqlSsl", () => {
     const failing = () => {
       throw new Error("ENOENT: contenido-secreto");
     };
-    const result = resolveMysqlSsl(
-      { MYSQL_SSL: "required", MYSQL_SSL_CA: "/missing.pem" },
+    const result = resolveDbSsl(
+      { ssl: "required", ca: "/missing.pem" },
       failing,
     );
     expect(result).toEqual({

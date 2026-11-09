@@ -1,4 +1,4 @@
-import { stripSqlLiteralsAndComments } from "./sql-normalize.js";
+import { stripSqlLiteralsAndComments } from "./mysql/sql-normalize.js";
 
 describe("stripSqlLiteralsAndComments", () => {
   it("un comentario es un espacio, no pega los tokens", () => {

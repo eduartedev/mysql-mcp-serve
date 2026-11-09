@@ -9,8 +9,8 @@ import {
   hasAlwaysTrueWhere,
   requiresWhereClause,
   hasMultipleStatements,
-} from "./sql-validation.js";
-import { stripSqlLiteralsAndComments } from "./sql-normalize.js";
+} from "./mysql/sql-validation.js";
+import { stripSqlLiteralsAndComments } from "./mysql/sql-normalize.js";
 
 function stripped(sql: string): string {
   const r = stripSqlLiteralsAndComments(sql);

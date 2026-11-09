@@ -1,6 +1,6 @@
 import { z } from "zod";
-import type { AccessMode } from "./access-mode.js";
-import { DEFAULT_PAGE_LIMIT, MAX_OFFSET, MAX_PAGE_LIMIT } from "./constants.js";
+import type { AccessMode } from "../shared/access-mode.js";
+import { DEFAULT_PAGE_LIMIT, MAX_OFFSET, MAX_PAGE_LIMIT } from "../shared/constants.js";
 import { authorizeDatabase, type Allowlist } from "./schema-permissions.js";
 
 export type CatalogKind = "view" | "trigger" | "function" | "procedure";
@@ -10,7 +10,7 @@ const OBJECT_NAME_PATTERN = /^[A-Za-z0-9_]+$/;
 const ERR_INVALID_OBJECT_NAME =
   "Nombre de objeto no válido. Solo se permiten letras, números y guion bajo.";
 const ERR_MISSING_SCHEMA =
-  "Indica el argumento database o MYSQL_DATABASE, incluido en MYSQL_ALLOWED_DATABASES.";
+  "Indica el argumento database o DB_DATABASE, incluido en DB_ALLOWED_DATABASES.";
 
 export const CatalogSchema = z
   .object({
@@ -25,7 +25,7 @@ export const CatalogSchema = z
     database: z
       .string()
       .optional()
-      .describe("Base a consultar. Opcional si MYSQL_DATABASE ya está definida."),
+      .describe("Base a consultar. Opcional si DB_DATABASE ya está definida."),
     limit: z
       .number()
       .int()
