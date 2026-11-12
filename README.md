@@ -4,7 +4,44 @@
 
 # mysql-mcp-server
 
-MCP server for querying and controlled modification of **MySQL/MariaDB or PostgreSQL**. Single binary; engine via `DB_ENGINE` or autodetect from `DB_PORT` (`5432` → PostgreSQL, `3306` → MySQL). See [README.es.md](README.es.md) for full `DB_*` configuration.
+MCP server for querying and controlled modification of MySQL/MariaDB or PostgreSQL. Single binary; the engine is chosen with `DB_ENGINE` or, if missing, from `DB_PORT` (`5432` → PostgreSQL, `3306` → MySQL). Built for Cursor or any other MCP client.
+
+## Requirements
+
+- Node.js >= 18
+- Reachable MySQL/MariaDB or PostgreSQL (local, Laragon, RDS, etc.)
+
+## Installation
+
+```bash
+npm install
+```
+
+## Configuration
+
+Connection via environment variables. On startup a `.env` in the working directory is loaded (not committed to Git). Keys `DB_*`, `MYSQL_*`, and `POSTGRES_*` are accepted; the process does not ship them.
+
+### Engine
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DB_ENGINE` | autodetect / `mysql` | `mysql` or `postgres`. If missing, `DB_PORT=5432` → postgres; `DB_PORT=3306` → mysql |
+| `DB_HOST` | `localhost` | Host (wins over `MYSQL_HOST` / `POSTGRES_HOST`) |
+| `DB_PORT` | 3306 or 5432 by engine | Port |
+| `DB_USER` | `root` / `postgres` | Username |
+| `DB_PASSWORD` | (empty) | Password |
+| `DB_DATABASE` | (optional) | Connection database for MySQL or PostgreSQL |
+| `DB_SCHEMA` | `public` (Postgres only) | Default schema for `search_path` and allowlist |
+| `DB_ACCESS_MODE` | readonly | Only `readwrite` enables writes |
+| `DB_ALLOWED_DATABASES` | (empty) | Allowlist `name`, `name:ro`, `name:rw`. In Postgres these are **schemas** |
+| `DB_PII_COLUMNS` | (empty) | Extra columns to mask |
+| `DB_SSL` | (empty) | Only `required` enables TLS |
+| `DB_SSL_CA` / `CERT` / `KEY` | (optional) | PEM file paths on disk |
+| `DB_SSL_REJECT_UNAUTHORIZED` | true | Only `false` disables verify |
+
+`MYSQL_*` and `POSTGRES_*` remain as fallbacks (`DB_*` wins when both are set).
+
+### MySQL / MariaDB (`MYSQL_*` aliases)
 
 | Variable         | Default | Description |
 |------------------|---------|-------------|
@@ -23,6 +60,27 @@ MCP server for querying and controlled modification of **MySQL/MariaDB or Postgr
 | `MYSQL_SSL_REJECT_UNAUTHORIZED` | true | Only the exact value `false` disables server certificate verification. Any other value keeps it enabled |
 
 `MYSQL_SSL*` variables accept file paths to PEM files on disk only, never inline certificate content. They are read once when the connection pool is created (on the first query after the server starts); changing them requires restarting the MCP. `rejectUnauthorized` defaults to `true` when TLS is enabled. MariaDB uses the same mysql2 client, so configuration is identical.
+
+### PostgreSQL
+
+Tools: `postgres_query`, `postgres_catalog`. The **`schema`** argument (not `database`) adjusts `search_path`. RDS usually needs `DB_SSL=required` and `DB_SSL_CA` pointing at the AWS PEM bundle. If the port is not 5432, set `DB_ENGINE=postgres`.
+
+Example Postgres `.env`:
+
+```
+DB_HOST=your-instance.region.rds.amazonaws.com
+DB_PORT=5432
+DB_USER=app_readonly
+DB_PASSWORD=your_password
+DB_DATABASE=app
+DB_SCHEMA=public
+DB_ACCESS_MODE=readonly
+DB_ALLOWED_DATABASES=public,reporting:ro
+DB_SSL=required
+DB_SSL_CA=C:/path/global-bundle.pem
+```
+
+**Languages:** [English](README.md) · [Español](README.es.md)
 
 Example `.env`:
 
@@ -127,17 +185,27 @@ The first time, `npx` downloads the package from the registry; you do not need t
 
 ## Available tools
 
-- **mysql_query**: runs a validated SQL query.
-  - `query`: query text.
-  - `database`: (optional) database to use; defaults to `MYSQL_DATABASE`.
-  - `limit`: (optional) rows per page, default 20, max 100.
-  - `offset`: (optional) rows to skip before the page, default 0, max 100000.
-  - `response_format`: (optional) `markdown` (default) or `json`.
-- **mysql_catalog**: reads view, trigger, function, and procedure definitions from `information_schema`.
-  - `kind`: `view`, `trigger`, `function`, or `procedure`.
-  - `name`: (optional) object name; letters, numbers, and underscore only. If omitted, lists all objects of that type. The server passes it as a parameter; it is not concatenated into SQL.
-  - `database`: (optional) database to query; must be allowed by `MYSQL_ALLOWED_DATABASES`. Defaults to `MYSQL_DATABASE`.
-  - `limit`, `offset`, and `response_format`: same as `mysql_query`.
+Depending on the active engine:
+
+- **mysql_query** / **mysql_catalog** (MySQL/MariaDB)
+- **postgres_query** / **postgres_catalog** (PostgreSQL)
+
+### mysql_query
+
+- `query`: query text.
+- `database`: (optional) database to use; defaults to `MYSQL_DATABASE`.
+- `limit`: (optional) rows per page, default 20, max 100.
+- `offset`: (optional) rows to skip before the page, default 0, max 100000.
+- `response_format`: (optional) `markdown` (default) or `json`.
+
+### mysql_catalog
+
+Reads view, trigger, function, and procedure definitions from `information_schema`.
+
+- `kind`: `view`, `trigger`, `function`, or `procedure`.
+- `name`: (optional) object name; letters, numbers, and underscore only. If omitted, lists all objects of that type. The server passes it as a parameter; it is not concatenated into SQL.
+- `database`: (optional) database to query; must be allowed by `MYSQL_ALLOWED_DATABASES`. Defaults to `MYSQL_DATABASE`.
+- `limit`, `offset`, and `response_format`: same as `mysql_query`.
 
 A `SELECT` without its own `LIMIT` is executed with `LIMIT offset, count`. If the query already has `LIMIT`, ends with a line comment, or uses `FOR UPDATE` / `LOCK IN SHARE MODE`, MySQL returns at most `offset + limit + 1` rows and pagination is applied here. Other commands are paginated in memory.
 
@@ -167,13 +235,13 @@ Allowed `SHOW` examples: `SHOW TABLES`, `SHOW DATABASES`, `SHOW COLUMNS`, `SHOW 
 
 ### Security restrictions
 
-- The server is read-only by default. Writes (`INSERT`, `UPDATE`, `DELETE`) require `MYSQL_ACCESS_MODE=readwrite`; the value is read at startup, so changing it requires restarting the MCP.
-- A database marked `:ro` in `MYSQL_ALLOWED_DATABASES` rejects writes even with `MYSQL_ACCESS_MODE=readwrite`. That includes a qualified name (`analytics.table`) used from another database. Marking a database `:rw` does not override a read-only process. The list is read at startup.
-- A qualified name (`other_db.table`, with spaces, backticks, or double quotes) is checked against `MYSQL_ALLOWED_DATABASES`. Same for `SHOW CREATE`, `DESCRIBE`, `SHOW TABLES FROM`, `ANALYZE TABLE`, `CHECK TABLE`, and `CHECKSUM TABLE`.
-- `mysql_catalog` only reads `information_schema`. It does not run `CALL` or `CREATE`. Object names are not concatenated into SQL.
-- Columns `email`, `correo`, `phone`, `telefono`, `password`, `contrasena`, `ssn`, `nss`, and `token`, plus those in `MYSQL_PII_COLUMNS`, are returned as `***`. This applies to text and `structuredContent`. A column like `notes` is not inspected even if the value looks like an email.
+- The server is read-only by default. Writes (`INSERT`, `UPDATE`, `DELETE`) require `MYSQL_ACCESS_MODE=readwrite` (or `DB_ACCESS_MODE=readwrite`); the value is read at startup, so changing it requires restarting the MCP.
+- A database marked `:ro` in `MYSQL_ALLOWED_DATABASES` / `DB_ALLOWED_DATABASES` rejects writes even with readwrite access. That includes a qualified name (`analytics.table`) used from another database. Marking a database `:rw` does not override a read-only process. The list is read at startup. In Postgres the allowlist applies to **schemas**.
+- A qualified name (`other_db.table`, with spaces, backticks, or double quotes) is checked against the allowlist. Same for `SHOW CREATE`, `DESCRIBE`, `SHOW TABLES FROM`, `ANALYZE TABLE`, `CHECK TABLE`, and `CHECKSUM TABLE`.
+- `mysql_catalog` / `postgres_catalog` only read catalog metadata. They do not run `CALL` or `CREATE`. Object names are not concatenated into SQL.
+- Columns `email`, `correo`, `phone`, `telefono`, `password`, `contrasena`, `ssn`, `nss`, and `token`, plus those in `DB_PII_COLUMNS` / `MYSQL_PII_COLUMNS`, are returned as `***`. This applies to text and `structuredContent`. A column like `notes` is not inspected even if the value looks like an email.
 - When writes are enabled, `UPDATE` and `DELETE` **must** include a `WHERE` clause.
-- Always-true `WHERE` clauses are rejected (`WHERE 1=1`, `WHERE (1=1)`, `WHERE TRUE`, `WHERE 1`, `WHERE 'a'='a'`, `OR 1=1`). Before `UPDATE` or `DELETE`, the connection enables `sql_safe_updates`.
+- Always-true `WHERE` clauses are rejected (`WHERE 1=1`, `WHERE (1=1)`, `WHERE TRUE`, `WHERE 1`, `WHERE 'a'='a'`, `OR 1=1`). Before MySQL `UPDATE` or `DELETE`, the connection enables `sql_safe_updates`.
 - Multiple statements in a single query are not allowed.
 - Destructive commands are blocked: `DROP`, `TRUNCATE`, `ALTER`, `CREATE`, `REPLACE`, `RENAME`, `GRANT`, `REVOKE`, `LOAD DATA`, `FLUSH`, `RESET`, `PREPARE`, etc.
 - Sensitive `SHOW` variants are blocked: `SHOW GRANTS`, `SHOW VARIABLES`, `SHOW PROCESSLIST`, `SHOW MASTER/SLAVE/REPLICA STATUS`, `SHOW BINARY LOGS`, etc.

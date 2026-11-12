@@ -1,6 +1,6 @@
 {
   "name": "@eduartedev/mysql-mcp-server",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "MCP server to query MySQL/MariaDB or PostgreSQL with validated SQL, read-only defaults, and PII masking",
   "type": "module",
   "main": "dist/index.js",
@@ -9,7 +9,9 @@
   },
   "files": [
     "dist",
-    "assets/icon.svg"
+    "assets/icon.svg",
+    "README.md",
+    "README.es.md"
   ],
   "repository": {
     "type": "git",
