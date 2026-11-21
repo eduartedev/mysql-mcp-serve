@@ -1,0 +1,75 @@
+{
+  "name": "mysql-mcp-server",
+  "version": "1.2.0",
+  "description": "MCP server for MySQL, MariaDB, and PostgreSQL with validated SQL, read-only defaults, allowlists, and PII masking.",
+  "author": {
+    "name": "Eduarte Dev"
+  },
+  "license": "MIT",
+  "keywords": ["mcp", "mysql", "postgresql", "mariadb", "database", "sql"],
+  "homepage": "https://github.com/eduartedev/mysql-mcp-serve",
+  "repository": "https://github.com/eduartedev/mysql-mcp-serve",
+  "logo": "assets/icon.svg",
+  "skills": "./skills/",
+  "variables": {
+    "type": "object",
+    "properties": {
+      "DB_ENGINE": {
+        "type": "string",
+        "title": "Database engine",
+        "description": "mysql or postgres. Omit or leave empty to autodetect from DB_PORT."
+      },
+      "DB_HOST": {
+        "type": "string",
+        "title": "Host",
+        "description": "Database server hostname",
+        "default": "localhost"
+      },
+      "DB_PORT": {
+        "type": "string",
+        "title": "Port",
+        "description": "3306 for MySQL/MariaDB, 5432 for PostgreSQL",
+        "default": "3306"
+      },
+      "DB_USER": {
+        "type": "string",
+        "title": "User",
+        "description": "Database username"
+      },
+      "DB_PASSWORD": {
+        "type": "string",
+        "title": "Password",
+        "description": "Database password (stored in Cursor plugin config, not in the repo)"
+      },
+      "DB_DATABASE": {
+        "type": "string",
+        "title": "Database",
+        "description": "Default database (MySQL) or database name (PostgreSQL connection)"
+      },
+      "DB_SCHEMA": {
+        "type": "string",
+        "title": "PostgreSQL schema",
+        "description": "Default schema for search_path (PostgreSQL only)",
+        "default": "public"
+      },
+      "DB_ACCESS_MODE": {
+        "type": "string",
+        "title": "Access mode",
+        "description": "readonly (default) or readwrite for guarded INSERT/UPDATE/DELETE",
+        "enum": ["readonly", "readwrite"],
+        "default": "readonly"
+      },
+      "DB_ALLOWED_DATABASES": {
+        "type": "string",
+        "title": "Allowlist",
+        "description": "Comma-separated db/schema names: name, name:ro, or name:rw"
+      },
+      "DB_PII_COLUMNS": {
+        "type": "string",
+        "title": "Extra PII columns",
+        "description": "Comma-separated column names to mask as ***"
+      }
+    },
+    "required": ["DB_HOST", "DB_USER", "DB_DATABASE"]
+  }
+}

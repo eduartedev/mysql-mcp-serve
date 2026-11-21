@@ -242,6 +242,14 @@ Ejemplos de `SHOW` permitidos: `SHOW TABLES`, `SHOW DATABASES`, `SHOW COLUMNS`, 
 - Se bloquean variantes sensibles de `SHOW`: `SHOW GRANTS`, `SHOW VARIABLES`, `SHOW PROCESSLIST`, `SHOW MASTER/SLAVE/REPLICA STATUS`, `SHOW BINARY LOGS`, etc.
 - Se bloquean funciones peligrosas: `SLEEP()`, `BENCHMARK()`, `LOAD_FILE()`, `INTO OUTFILE`, `INTO DUMPFILE`.
 
+## Plugin de Cursor (Marketplace y cursor.directory)
+
+El repo incluye manifiestos de plugin (`.cursor-plugin/`, `mcp.json`, `.mcp.json`, `skills/`). Guía paso a paso: [PUBLISHING.es.md](PUBLISHING.es.md).
+
+- **cursor.directory:** [enviar plugin](https://cursor.directory/plugins/new?type=mcp_server) con la URL de GitHub.
+- **Cursor Marketplace:** [marketplace/publish](https://cursor.com/marketplace/publish) (revisión manual).
+- **Instalación rápida:** [Add to Cursor](https://cursor.com/install-mcp?name=mysql-mcp-server&config=eyJtY3BTZXJ2ZXJzIjp7Im15c3FsLW1jcC1zZXJ2ZXIiOnsiY29tbWFuZCI6Im5weCIsImFyZ3MiOlsiLXkiLCJAZWR1YXJ0ZWRldi9teXNxbC1tY3Atc2VydmVyIl0sImVudiI6eyJEQl9IT1NUIjoibG9jYWxob3N0IiwiREJfQUNDRVNTX01PREUiOiJyZWFkb25seSJ9fX19) (configura `DB_USER` / `DB_DATABASE` / contraseña en Cursor tras instalar).
+
 ## Comandos del proyecto
 
 | Comando         | Descripción                    |

@@ -1,6 +1,6 @@
 {
   "name": "@eduartedev/mysql-mcp-server",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "MCP server to query MySQL/MariaDB or PostgreSQL with validated SQL, read-only defaults, and PII masking",
   "type": "module",
   "main": "dist/index.js",
@@ -25,7 +25,7 @@
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
   },
   "keywords": ["mcp", "mysql", "postgresql", "mariadb", "database"],
-  "author": "",
+  "author": "Eduarte Dev",
   "license": "MIT",
   "engines": {
     "node": ">=18"

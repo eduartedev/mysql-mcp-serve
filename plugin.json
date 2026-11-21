@@ -1,0 +1,13 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "mysql-mcp-server",
+  "version": "1.2.0",
+  "description": "MCP server for MySQL, MariaDB, and PostgreSQL with validated SQL, read-only defaults, allowlists, and PII masking.",
+  "author": {
+    "name": "Eduarte Dev"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/eduartedev/mysql-mcp-serve",
+  "repository": "https://github.com/eduartedev/mysql-mcp-serve",
+  "keywords": ["mcp", "mysql", "postgresql", "mariadb", "database"]
+}

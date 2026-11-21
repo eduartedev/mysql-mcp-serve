@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "mysql-mcp-server": {
+      "command": "npx",
+      "args": ["-y", "@eduartedev/mysql-mcp-server"],
+      "env": {
+        "DB_ENGINE": "mysql",
+        "DB_HOST": "localhost",
+        "DB_PORT": "3306",
+        "DB_USER": "app",
+        "DB_PASSWORD": "",
+        "DB_DATABASE": "your_database",
+        "DB_ACCESS_MODE": "readonly",
+        "DB_ALLOWED_DATABASES": "your_database,analytics:ro",
+        "DB_PII_COLUMNS": ""
+      }
+    }
+  }
+}
